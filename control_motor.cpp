@@ -19,6 +19,7 @@
 #include <fstream>*/
 #include "control_motor.hpp"
 #define T  0.0001
+ofstream Tr ("Tr.txt");
 extern double M;//0.050382//0.0117//0.069312//mutual inductance
 extern double Ls;//0.051195//0.014//0.07132
 
@@ -116,6 +117,7 @@ double theta_r;
 double alfa;
 
 */
+
 	double motor::torque(double Vds,double Vqs){//torque generated
 		//	cout<<"vds:"<<Vds<<endl<<"Vqs:"<<Vqs<<endl;
 		ids=ids+(Vds/roLs-alfa*ids+B/TR*fdr+np*wr*B*fqr+np*wr*iqs)*T;//ids=Lr/(Lr*Ls-M*M)*fds-M/(Ls*Lr-M*M)*fdr;
@@ -139,7 +141,8 @@ double motor::get_TR(){return TR;};
 void motor::set_theta_r(double t){theta_r=t;};
 //void incr_n(){nn++;};
 	//int n(){return nn;};///alteradOOOOOOOOOOO
-	motor::motor(){TR=/*1.12252*/0.17703/*Lr/Rr*/;Rs=0.258/*0.10941*//*0.435*/;alfa=(Rs/roLs+M*M/(roLs*Lr*TR));n=0;ids=0;iqs=0;idr=0;iqr=0;wr=0;/*Rr=3.9;*/fds=0;fqs=0;fdr=0;fqr=0;};
+	motor::motor(){TR=/*1.12252*/0.17703/*Lr/Rr*/;Rs=/*0.258*/0.10941/*0.435*/;alfa=(Rs/roLs+M*M/(roLs*Lr*TR));n=0;ids=0;iqs=0;idr=0;iqr=0;wr=0;/*Rr=3.9;*/fds=0;fqs=0;fdr=0;fqr=0;};
+	motor::~motor(){};
 	double motor::torque(double vas,double vbs,double vcs){
 		return torque(ClarkePark(/*2*PI*fhz*/np*theta_r,tThreePhase(vas,vbs,vcs)).d,ClarkePark(/*2*PI*fhz*/np*theta_r,tThreePhase(vas,vbs,vcs)).q);
 	};
@@ -195,14 +198,15 @@ double motor::get_Rs(){return Rs;};
 	//float Theta_r;
 	//double w_ref;
 
-	control_loops::control_loops():c(0),imrref(0.0),angle(0.0),abc_current(0.0,0.0,0.0),abc_voltage(0.0,0.0,0.0),IDQ(0.0001,0.0001),VDQ(0.0,0.0),rot_fl_an(0.0),Theta_r(0.0),w_ref(0.0),V(0.0,0.0){
-			vel.tune_pid(vel_p,vel_i,vel_d);
+	control_loops::control_loops():c(0),imrref(0.0),angle(0.0),abc_current(0.0,0.0,0.0),abc_voltage(0.0,0.0,0.0),IDQ(0.0001,0.0001),VDQ(0.0,0.0),rot_fl_an(0.0),Theta_r(0.0),w_ref(0.0),V(0.0,0.0),IDQ_rotor(0.0,0.0),VDQ_rotor(0.0,0.0){
+			vel.tune_pid(vel_p,vel_i,vel_d);/*vector <Rs_Tr> ConstTr(100,Rs_Tr())*/;ConstTr=nullptr;
 			torque_control.tune_pid(torque_control_p,torque_control_i,torque_control_d);
 			current_control_y.tune_pid(current_control_y_p,current_control_y_i,current_control_y_d);
 			current_control_x.tune_pid(current_control_x_p,current_control_x_i,current_control_x_d);
 			flux_control.tune_pid(flux_control_p,flux_control_i,flux_control_d);
 			
 	};
+	control_loops::~control_loops(){/*delete ConstTr;*/};
 	void control_loops::set_w_ref(double wreff) {w_ref=wreff;};
 	void control_loops::set_imrref(double imrreff){imrref=imrreff;};
 	double control_loops::get_w_ref(){return w_ref;};
@@ -215,6 +219,24 @@ double motor::get_Rs(){return Rs;};
 		motor::set_theta_r(Theta_r);//float Theta_r_np=Theta_r*np;while(Theta_r_np>=2*PI){Theta_r_np=Theta_r_np-2*PI;};
 		//cout<<"Theta_r*np"<<(Theta_r_np)<<endl;//adapt after 2PI; electrical?
 	}
+	
+	/*void control_loops::*/class ConstantTr/*(Rs_Tr * ConstTr_)*/{
+		////-------estimacao de TR:	
+				public:
+					void operator()(Rs_Tr * ConstTr_,control_loops * thiss){
+				//vector<Rs_Tr >::iterator it = ConstTr.end();it--;
+		//	/*	if ((1.05*velo)>(motor::wr)&&(velo*0.95)<(motor::wr)){*/
+				ConstTr_->Rs_Tr_do_it();
+				/*se for maior ou menor que 1+-7%*/
+				thiss->set_TR(ConstTr_->get_Tr());/*motor::Rs=ConstTr->get_Rs();*/cout<<"TR::::"<<ConstTr_->get_Tr()<<endl/*<<"Rs:"<<motor::Rs<<endl*/;double R=ConstTr_->get_Rs();double TT=ConstTr_->get_Tr();Tr<<"TR::::"<<TT<<"RS"<<R<<endl;
+				//};
+				delete ConstTr_;Tr<<"before nullptr"<<ConstTr_<<endl;ConstTr_=nullptr;Tr<<ConstTr_<<endl;
+		//TODO
+	};
+	};
+//std::thread control_loops::thread_Tr() {//TODO-retirar?
+//          return std::thread([=] {control_loops::ConstantTr(); });
+//};
 	//get_VDQ +++++++++++++++++++++++++++
 	tTwoPhase control_loops::get_V(/*const*/ ){
 			if(n==0){
@@ -250,24 +272,27 @@ cout<<"imrref_"<<imrref<<endl;
 			abc_current.a=/*motor::*/this->get_ias();cout<<"ia"<<abc_current.a<<endl;abc_current.b=this->get_ibs();abc_current.c=-abc_current.a-abc_current.b;//TODO: for real motor
 			IDQ=ClarkePark(rot_fl_an,abc_current);//TODO???rfa==0?
 
-			tTwoPhaseDQ IDQ_rotor(ClarkePark((np*Theta_r),abc_current));
-			tTwoPhaseDQ VDQ_rotor(ClarkePark((np*Theta_r),abc_voltage));//TODO: voltage,done?, sensor?				
-	
-	if(n>5000){
-		if(c==0){
-			velo=motor::wr;ConstTr=new Rs_Tr();/**/}
-		if (c<100){
-			c++;
-			ConstTr->enter_medition(IDQ_rotor.d/*f.filtred_isx()*/,IDQ_rotor.q/*f.filtred_isy()*/,VDQ_rotor.d/*f.filtred_usx()*/,VDQ_rotor.q/*f.filtred_usy()*/,motor::wr/*f.filtred_()*/);
-		};
-		if(c==100/*&&((1.10*velo)>(motor::wr)&&(velo*0.9)<(motor::wr))*/){
-			ConstTr->Rs_Tr_do_it();
-			c=0;
-			this->set_TR(ConstTr->get_Tr());/*motor::Rs=ConstTr->get_Rs();*/cout<<"TR::::"<<motor::TR<<endl/*<<"Rs:"<<motor::Rs<<endl*/;
-			delete ConstTr;ConstTr=nullptr;
-		};
-	};//TODO
-	
+			/*tTwoPhaseDQ*/IDQ_rotor=(ClarkePark((np*Theta_r),abc_current));
+			/*tTwoPhaseDQ*/VDQ_rotor=(ClarkePark((np*Theta_r),abc_voltage));//TODO: voltage,done?, sensor?				
+			//signal_Tr;//start_thread_Tr();//TODO??
+			if(n>5000){
+				if(c==0){
+					velo=motor::wr; ConstTr=new Rs_Tr();//Rs_Tr f;ConstTr.push_back(f);
+					Tr<<"new"<<ConstTr<<endl;
+				};
+				c++;
+				//vector<Rs_Tr >::iterator it = ConstTr.end();it--;
+				//h=ConstTr.size();h--;
+				ConstTr->enter_medition(IDQ_rotor.d/*f.filtred_isx()*/,IDQ_rotor.q/*f.filtred_isy()*/,VDQ_rotor.d/*f.filtred_usx()*/,VDQ_rotor.q/*f.filtred_usy()*/,motor::wr/*f.filtred_()*/);
+				//};
+				if(c==100/*&&*/){	
+				c=0;
+				//signal_Tr;//TODO
+				std::thread t1((ConstantTr()),std::move(ConstTr),std::move(this));
+				t1.join();
+				};
+			}		;
+////---------------------------	
 float IDQq=IDQ.q;float IDQd=IDQ.d;fIDQ<<n<<" "<<IDQd<<" "<<IDQq<<" IDQd "<<"IDQq"<<endl/*<<"motor::TR"<<motor::TR<<endl*/<<"motor::wr"<<motor::wr;
 			rot_fl_an=angle.RotFluxAng(IDQq,IDQd,T,motor::TR,(motor::wr*np));cout<<"rfa:"<<rot_fl_an<<endl;//TODO nofinal retirar T chamando-o d define
 
