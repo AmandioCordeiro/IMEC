@@ -261,7 +261,7 @@ class Stat_bar{
 			pSpeedOut_global->push(to_string(control.get_wr()));
 			pGeneratedTorque_global->push(to_string(control.get_torq_g()));
 			pMagCurrent_global->push(to_string(control.angle.get_imr()));
-			pTr_global->push(to_string(control.get_TR()));
+			pTr_global->push(to_string(control.get_Tr_calc_gl()));
 			pTimeOut_global->push(to_string(control.get_n()));
 			//cout <<"w:::"<<w<<endl;
 			pSpeed_reference_global->push(to_string(control.get_w_ref()));

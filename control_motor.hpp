@@ -108,7 +108,8 @@ long get_n();
 double torq_g;
 double get_torq_g();
 double TR;
-double get_TR();
+//double Tr_calc;
+double get_Tr_calc_gl();
 
 void set_theta_r(double t);
 //void incr_n(){nn++;};
@@ -121,7 +122,7 @@ void set_theta_r(double t);
 	double get_ibs();
 	double get_ics();
 	void set_torq_L(double torque);
-void set_TR(double r);
+void set_Tr_calc_gl(double r);
 void set_Rs(double rr);
 	double get_torq_L();
 	double get_wr();
@@ -139,6 +140,7 @@ double wr;
 
 class control_loops: public motor{
 public:
+	
 	double get_rot_fl_an();
 	double imrref;
 	double rot_fl_an;

@@ -11,6 +11,7 @@
 #include <fstream>
 //#include "filter_rtc.hpp"
 #include "bissection_exclusion4.hpp"
+#include "PEI.hpp"
 //#include "control_motor.cpp"
 //#include "sim7.cpp"
 using namespace std;
@@ -48,7 +49,7 @@ using namespace std;
 //double MB;//0.69851//B*M
 //ouble one_p_MB;//1.69851//1+MrB
 
-
+extern bool	zeros_pol;
 class Y_W_{
 protected:
 	double Y11,Y21,W11,W12,W13,W14,W15,W16,W17,W18,W21,W22,W23,W24,W25,W26,W27,W28;
@@ -103,7 +104,7 @@ float h01,h10,h00,h11;
 public:
 Rs_Tr();
 ~Rs_Tr();
-void do_it();//tornado publico somente para ver hessian TODO:coloca-lo privado no fim do projecto
+float do_it();//tornado publico somente para ver hessian TODO:coloca-lo privado no fim do projecto
 void Rs_Tr_do_it();
 double get_Tr();
 double get_Rs();

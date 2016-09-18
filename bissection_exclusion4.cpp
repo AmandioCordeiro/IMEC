@@ -11,7 +11,7 @@ using namespace std;
 
 //****************
 //#define get_rk2 a0a1b1
-
+bool zeros_pol=false;
 void deriv(double *pol_i, int dim_i, double *pol_o){//dim pol_o =dim_i-1
 		for(unsigned i=0;i<dim_i;++i){
 			pol_o[(i)]=(i+1)*pol_i[i+1];
@@ -107,19 +107,20 @@ vector<double> real_zeros_pol(double *poli,unsigned tam_poli){
 forward_list<pair<complex<double>,double> > z=find_squares(poli,tam_poli);
 	vector<double> f;
 	for(auto it=z.begin();it!=z.end();++it){
-		if(abs(get<0>(*it).imag())<valImagMin && get<0>(*it).real()>0) {f.push_back(get<0>(*it).real());}	
+		if(abs(get<0>(*it).imag())<valImagMin && get<0>(*it).real()>0) {f.push_back(get<0>(*it).real());zeros_pol=true;};
+			
 	};		
 						//	for(vector<float>::iterator it=f.begin();it!=f.end();++it){
 						//		for(vector<float>::iterator i=it;i!=f.end();++i){ 
 								//			if(trunc((*it)*trunc_res)/trunc_res==trunc((*i)*trunc_res)/trunc_res)f.erase(i);
 							//		}
-							//	}
+	if(zeros_pol==true){						//	}
 	for(unsigned  it=0;it<(f.size()-1);++it){
 		for(unsigned i=(it+1);i<f.size();++i){ 
 			if(trunc(f[it]*trunc_res)/trunc_res==trunc(f[i]*trunc_res)/trunc_res)f.erase(f.begin()+i);
 		}
 	}
-
+	};
 
 //for(vector<float>::iterator e=f.begin();e!=f.end();++e)cout<<*e<<endl;
 return f;

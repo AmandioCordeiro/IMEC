@@ -13,6 +13,7 @@ using namespace std;
 //filter
 
 //*********
+double Tr_calc_gl=0.17703;
 extern ofstream Tr ;
 double M=/*0.51233;*/0.050382;//0.0117//0.069312//mutual inductance
 double Ls=/*(0.00845+M);*/0.051195;//0.014//0.07132
@@ -164,7 +165,7 @@ double d2y_nt(double /*&*/y1, double /*&*/y,double /*&*/y_1){//derived can only 
 
 //public:
 	Y_W_::Y_W_():Rss/*0.258*/(0.10941),//*0.435*/),//oooo
- Trr(/*1.12252*/0.17703),/*Lr/Rrr*/////ooo
+ Trr(/*1.12252*/Tr_calc_gl/*0.17703*/),/*Lr/Rrr*/////ooo
 Ry(0.0),Y11(0.0),Y21(0.0),W11(0.0),W12(0.0),W13(0.0),W14(0.0),W15(0.0),W16(0.0),W17(0.0),W18(0.0),W21(0.0),W22(0.0),W23(0.0),W24(0.0),W25(0.0),W26(0.0),W27(0.0),W28(0.0),isx(0.0),isx_1(0.0),isx_2(0.0),isy(0.0),isy_1(0.0),isy_2(0.0),usx(0.0),usx_2(0.0),usy(0.0),usy_2(0.0),w(0.0),w_2(0.0),usx_temp(0.0),usy_temp(0.0),wr_temp(0.0){
 	for(int j=0;j<8;j++){Rwy[j]=0.0;}/*	Rwy[8]={0};Rw[8][8]={0.0};*/for(int i=0;i<8;i++){for(int j=0;j<8;j++){Rw[i][j]=0.0;}};n=0;
 	};
@@ -331,170 +332,175 @@ Ry(0.0),Y11(0.0),Y21(0.0),W11(0.0),W12(0.0),W13(0.0),W14(0.0),W15(0.0),W16(0.0),
 //unsigned k2if;
 //vector<float> k2;
 //vector<float> k1; 
-void Rs_Tr::do_it(){
+float Rs_Tr::do_it(){
 update_r_k2();//alteradoOOOOOOO criar construtores nos construtores das classes com herancas
 	int ind;if(a0a1b1[20]==0&&a0a1b1[19]==0)ind=18; else if(a0a1b1[20]==0){ind=19;}else {ind=20;};//TODO para outros indices com zero, ex. o penultimo
 	k2=real_zeros_pol(a0a1b1,ind);//alterOOO 19->20
-for(int i=0;i<k2.size();i++){cout<<"kkkkkkkkkkkkkkkkkkkkk222222222222222:"<<k2[i]<<endl;};cout<<"iiiiiii"<<endl;
-	k1.resize(0);
-	for(unsigned i=0;i<k2.size();++i){
-		double g=-fx(a0,7,k2[i])/fx(a1,6,k2[i]);if(g>0)k1.push_back(g);}/*k1.push_back(-fx(a0,7,k2[i])/fx(a1,6,k2[i]));*/for(unsigned i=0;i<k1.size();i++){cout<<"kkkkkkkkkkkkkkkkkkkkk1111111111111111111:"<<k1[i]<<endl;};cout<<"iiiiiii"<<endl;
-	float min_Ep2__k1_j__k2_i=0.0;
-	//for(unsigned i=0;i<k2.size();++i)//estva errado, nao é combinacao mas sim par de k2
-		for (unsigned j=0;j<k1.size();++j)//??
-				     {int i=j;
-						 float temp=
-						 Ry
-						 -2*(Rwy[0]*k1[j]+
-							Rwy[1]*k2[i]+
-							Rwy[2]*k2[i]*k2[i]+
-							Rwy[3]*k1[j]*k2[i]+
-							Rwy[4]/k2[i]+
-							Rwy[5]*k1[j]/k2[i]+
-							Rwy[6]*k1[j]/(k2[i]*k2[i])+
-							Rwy[7]/(k2[i]*k2[i]))
-							+
-							(Rw[0][0]*k1[j]+
-							Rw[0][1]*k2[i]+
-							Rw[0][2]*k2[i]*k2[i]+
-							Rw[0][3]*k1[j]*k2[i]+
-							Rw[0][4]/k2[i]+
-							Rw[0][5]*k1[j]/k2[i]+
-							Rw[0][6]*k1[j]/(k2[i]*k2[i])+
-							Rw[0][7]/(k2[i]*k2[i]))
-							*k1[j]+
-							(Rw[1][0]*k1[j]+
-							Rw[1][1]*k2[i]+
-							Rw[1][2]*k2[i]*k2[i]+
-							Rw[1][3]*k1[j]*k2[i]+
-							Rw[1][4]/k2[i]+
-							Rw[1][5]*k1[j]/k2[i]+
-							Rw[1][6]*k1[j]/(k2[i]*k2[i])+
-							Rw[1][7]/(k2[i]*k2[i]))
-							*k2[i]+
-							(Rw[2][0]*k1[j]+
-							Rw[2][1]*k2[i]+
-							Rw[2][2]*k2[i]*k2[i]+
-							Rw[2][3]*k1[j]*k2[i]+
-							Rw[2][4]/k2[i]+
-							Rw[2][5]*k1[j]/k2[i]+
-							Rw[2][6]*k1[j]/(k2[i]*k2[i])+
-							Rw[2][7]/(k2[i]*k2[i]))
-							*k2[i]*k2[i]+
-							(Rw[3][0]*k1[j]+
-							Rw[3][1]*k2[i]+
-							Rw[3][2]*k2[i]*k2[i]+
-							Rw[3][3]*k1[j]*k2[i]+
-							Rw[3][4]/k2[i]+
-							Rw[3][5]*k1[j]/k2[i]+
-							Rw[3][6]*k1[j]/(k2[i]*k2[i])+
-							Rw[3][7]/(k2[i]*k2[i]))
-						*k1[j]*k2[i]+	
-							(Rw[4][0]*k1[j]+
-							Rw[4][1]*k2[i]+
-							Rw[4][2]*k2[i]*k2[i]+
-							Rw[4][3]*k1[j]*k2[i]+
-							Rw[4][4]/k2[i]+
-							Rw[4][5]*k1[j]/k2[i]+
-							Rw[4][6]*k1[j]/(k2[i]*k2[i])+
-							Rw[4][7]/(k2[i]*k2[i]))
-						/k2[i]+	
-							(Rw[5][0]*k1[j]+
-							Rw[5][1]*k2[i]+
-							Rw[5][2]*k2[i]*k2[i]+
-							Rw[5][3]*k1[j]*k2[i]+
-							Rw[5][4]/k2[i]+
-							Rw[5][5]*k1[j]/k2[i]+
-							Rw[5][6]*k1[j]/(k2[i]*k2[i])+
-							Rw[5][7]/(k2[i]*k2[i]))
-						*k1[j]/k2[i]+
-							(Rw[6][0]*k1[j]+
-							Rw[6][1]*k2[i]+
-							Rw[6][2]*k2[i]*k2[i]+
-							Rw[6][3]*k1[j]*k2[i]+
-							Rw[6][4]/k2[i]+
-							Rw[6][5]*k1[j]/k2[i]+
-							Rw[6][6]*k1[j]/(k2[i]*k2[i])+
-							Rw[6][7]/(k2[i]*k2[i]))
-						*k1[j]/(k2[i]*k2[i])+
-							(Rw[7][0]*k1[j]+
-							Rw[7][1]*k2[i]+
-							Rw[7][2]*k2[i]*k2[i]+
-							Rw[7][3]*k1[j]*k2[i]+
-							Rw[7][4]/k2[i]+
-							Rw[7][5]*k1[j]/k2[i]+
-							Rw[7][6]*k1[j]/(k2[i]*k2[i])+
-							Rw[7][7]/(k2[i]*k2[i]))
-							/(k2[i]*k2[i]);
-							
+	if (k2.size()>0){for(int i=0;i<k2.size();i++){cout<<"kkkkkkkkkkkkkkkkkkkkk222222222222222:"<<k2[i]<<endl;};cout<<"iiiiiii"<<endl;
+		k1.resize(0);
+		for(unsigned i=0;i<k2.size();++i){
+			double g=-fx(a0,7,k2[i])/fx(a1,6,k2[i]);if(g>0)k1.push_back(g);}/*k1.push_back(-fx(a0,7,k2[i])/fx(a1,6,k2[i]));*/for(unsigned i=0;i<k1.size();i++){cout<<"kkkkkkkkkkkkkkkkkkkkk1111111111111111111:"<<k1[i]<<endl;};cout<<"iiiiiii"<<endl;
+		float min_Ep2__k1_j__k2_i=0.0;
+		//for(unsigned i=0;i<k2.size();++i)//estva errado, nao é combinacao mas sim par de k2
+			for (unsigned j=0;j<k1.size();++j)//??
+						 {int i=j;
+							 float temp=
+							 Ry
+							 -2*(Rwy[0]*k1[j]+
+								Rwy[1]*k2[i]+
+								Rwy[2]*k2[i]*k2[i]+
+								Rwy[3]*k1[j]*k2[i]+
+								Rwy[4]/k2[i]+
+								Rwy[5]*k1[j]/k2[i]+
+								Rwy[6]*k1[j]/(k2[i]*k2[i])+
+								Rwy[7]/(k2[i]*k2[i]))
+								+
+								(Rw[0][0]*k1[j]+
+								Rw[0][1]*k2[i]+
+								Rw[0][2]*k2[i]*k2[i]+
+								Rw[0][3]*k1[j]*k2[i]+
+								Rw[0][4]/k2[i]+
+								Rw[0][5]*k1[j]/k2[i]+
+								Rw[0][6]*k1[j]/(k2[i]*k2[i])+
+								Rw[0][7]/(k2[i]*k2[i]))
+								*k1[j]+
+								(Rw[1][0]*k1[j]+
+								Rw[1][1]*k2[i]+
+								Rw[1][2]*k2[i]*k2[i]+
+								Rw[1][3]*k1[j]*k2[i]+
+								Rw[1][4]/k2[i]+
+								Rw[1][5]*k1[j]/k2[i]+
+								Rw[1][6]*k1[j]/(k2[i]*k2[i])+
+								Rw[1][7]/(k2[i]*k2[i]))
+								*k2[i]+
+								(Rw[2][0]*k1[j]+
+								Rw[2][1]*k2[i]+
+								Rw[2][2]*k2[i]*k2[i]+
+								Rw[2][3]*k1[j]*k2[i]+
+								Rw[2][4]/k2[i]+
+								Rw[2][5]*k1[j]/k2[i]+
+								Rw[2][6]*k1[j]/(k2[i]*k2[i])+
+								Rw[2][7]/(k2[i]*k2[i]))
+								*k2[i]*k2[i]+
+								(Rw[3][0]*k1[j]+
+								Rw[3][1]*k2[i]+
+								Rw[3][2]*k2[i]*k2[i]+
+								Rw[3][3]*k1[j]*k2[i]+
+								Rw[3][4]/k2[i]+
+								Rw[3][5]*k1[j]/k2[i]+
+								Rw[3][6]*k1[j]/(k2[i]*k2[i])+
+								Rw[3][7]/(k2[i]*k2[i]))
+							*k1[j]*k2[i]+	
+								(Rw[4][0]*k1[j]+
+								Rw[4][1]*k2[i]+
+								Rw[4][2]*k2[i]*k2[i]+
+								Rw[4][3]*k1[j]*k2[i]+
+								Rw[4][4]/k2[i]+
+								Rw[4][5]*k1[j]/k2[i]+
+								Rw[4][6]*k1[j]/(k2[i]*k2[i])+
+								Rw[4][7]/(k2[i]*k2[i]))
+							/k2[i]+	
+								(Rw[5][0]*k1[j]+
+								Rw[5][1]*k2[i]+
+								Rw[5][2]*k2[i]*k2[i]+
+								Rw[5][3]*k1[j]*k2[i]+
+								Rw[5][4]/k2[i]+
+								Rw[5][5]*k1[j]/k2[i]+
+								Rw[5][6]*k1[j]/(k2[i]*k2[i])+
+								Rw[5][7]/(k2[i]*k2[i]))
+							*k1[j]/k2[i]+
+								(Rw[6][0]*k1[j]+
+								Rw[6][1]*k2[i]+
+								Rw[6][2]*k2[i]*k2[i]+
+								Rw[6][3]*k1[j]*k2[i]+
+								Rw[6][4]/k2[i]+
+								Rw[6][5]*k1[j]/k2[i]+
+								Rw[6][6]*k1[j]/(k2[i]*k2[i])+
+								Rw[6][7]/(k2[i]*k2[i]))
+							*k1[j]/(k2[i]*k2[i])+
+								(Rw[7][0]*k1[j]+
+								Rw[7][1]*k2[i]+
+								Rw[7][2]*k2[i]*k2[i]+
+								Rw[7][3]*k1[j]*k2[i]+
+								Rw[7][4]/k2[i]+
+								Rw[7][5]*k1[j]/k2[i]+
+								Rw[7][6]*k1[j]/(k2[i]*k2[i])+
+								Rw[7][7]/(k2[i]*k2[i]))
+								/(k2[i]*k2[i]);
+								
 
-			if(min_Ep2__k1_j__k2_i==0.0){min_Ep2__k1_j__k2_i=temp;k1jf=j;k2if=i;}
-				else if(temp<min_Ep2__k1_j__k2_i){min_Ep2__k1_j__k2_i=temp;k1jf=j;k2if=i;}
-			};
-			
+				if(min_Ep2__k1_j__k2_i==0.0){min_Ep2__k1_j__k2_i=temp;k1jf=j;k2if=i;}
+					else if(temp<min_Ep2__k1_j__k2_i){min_Ep2__k1_j__k2_i=temp;k1jf=j;k2if=i;}
+				};
+				
 
 
-	h00=                                                           
-      2/pow(k2[k2if],2)*(Rw[6][6]/pow(k2[k2if],2)+Rw[6][5]/k2[k2if]+k2[k2if]*Rw[6][3]+Rw[6][0])+2/k2[k2if]*(Rw[5][6]/pow(k2[k2if],2)+Rw[5][5]/k2[k2if]+k2[k2if]*Rw[5][3]+Rw[5][0])            
-	  +2*k2[k2if]*(Rw[3][6]/pow(k2[k2if],2)+Rw[3][5]/k2[k2if]+k2[k2if]*Rw[3][3]+Rw[3][0])+2*Rw[0][6]/pow(k2[k2if],2)+2*Rw[0][5]/k2[k2if]+2*k2[k2if]*Rw[0][3] +2*Rw[0][0];
-                                     
-                                    
-	 h01=
-	-2*(-2*Rwy[6]/pow(k2[k2if],3)-Rwy[5]/pow(k2[k2if],2)+Rwy[3])
-	-2/pow(k2[k2if],3)*(Rw[7][6]/pow(k2[k2if],2)+Rw[7][5]/k2[k2if]+k2[k2if]*Rw[7][3]+Rw[7][0])
-	+1/pow(k2[k2if],2)*(-2*Rw[7][6]/pow(k2[k2if],3)-Rw[7][5]/pow(k2[k2if],2)+Rw[7][3])
-	-2/pow(k2[k2if],3)*(Rw[6][7]/pow(k2[k2if],2)+k1[k1jf]*Rw[6][6]/pow(k2[k2if],2)+k1[k1jf]*Rw[6][5]/k2[k2if]+Rw[6][4]/k2[k2if]+k1[k1jf]*k2[k2if]*Rw[6][3]+pow(k2[k2if],2)*Rw[6][2]+k2[k2if]*Rw[6][1]+k1[k1jf]*Rw[6][0])
-	+1/pow(k2[k2if],2)*(-2*Rw[6][7]/pow(k2[k2if],3)-2*k1[k1jf]*Rw[6][6]/pow(k2[k2if],3)-k1[k1jf]*Rw[6][5]/pow(k2[k2if],2)-Rw[6][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[6][3]+2*k2[k2if]*Rw[6][2]+Rw[6][1])
-	-2*k1[k1jf]/pow(k2[k2if],3)*(Rw[6][6]/pow(k2[k2if],2)+Rw[6][5]/k2[k2if]+k2[k2if]*Rw[6][3]+Rw[6][0])
-	+k1[k1jf]/pow(k2[k2if],2)*(-2*Rw[6][6]/pow(k2[k2if],3)-Rw[6][5]/pow(k2[k2if],2)+Rw[6][3])
-	-1/pow(k2[k2if],2)*(Rw[5][7]/pow(k2[k2if],2)+k1[k1jf]*Rw[5][6]/pow(k2[k2if],2)+k1[k1jf]*Rw[5][5]/k2[k2if]+Rw[5][4]/k2[k2if]+k1[k1jf]*k2[k2if]*Rw[5][3]+pow(k2[k2if],2)*Rw[5][2]+k2[k2if]*Rw[5][1]+k1[k1jf]*Rw[5][0])
-	+1/k2[k2if]*(-2*Rw[5][7]/pow(k2[k2if],3)-2*k1[k1jf]/pow(k2[k2if],3)*Rw[5][6]-((k1[k1jf])/pow(k2[k2if],2))*Rw[5][5]-Rw[5][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[5][3]+2*k2[k2if]*Rw[5][2]+Rw[5][1])
-	-k1[k1jf]/pow(k2[k2if],2)*(Rw[5][6]/pow(k2[k2if],2)+Rw[5][5]/k2[k2if]+k2[k2if]*Rw[5][3]+Rw[5][0])
-	+k1[k1jf]/k2[k2if]*(-2*Rw[5][6]/pow(k2[k2if],3)-Rw[5][5]/pow(k2[k2if],2)+Rw[5][3])
-	-1/pow(k2[k2if],2)*(Rw[4][6]/pow(k2[k2if],2)+Rw[4][5]/k2[k2if]+k2[k2if]*Rw[4][3]+Rw[4][0])
-	+1/k2[k2if]*(-2*Rw[4][6]/pow(k2[k2if],3)-Rw[4][5]/pow(k2[k2if],2)+Rw[4][3])
-	+k2[k2if]*(-2/pow(k2[k2if],3)*Rw[3][7]-2/pow(k2[k2if],3)*k1[k1jf]*Rw[3][6]-k1[k1jf]/pow(k2[k2if],2)*Rw[3][5]-Rw[3][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[3][3]+2*k2[k2if]*Rw[3][2]+Rw[3][1])
-	+Rw[3][7]/pow(k2[k2if],2)
-	+k1[k1jf]*(Rw[3][6]/pow(k2[k2if],2)+Rw[3][5]/k2[k2if]+k2[k2if]*Rw[3][3]+Rw[3][0])
-	+k1[k1jf]*k2[k2if]*(-2/pow(k2[k2if],3)*Rw[3][6]-Rw[3][5]/pow(k2[k2if],2)+Rw[3][3])
-	+k1[k1jf]/pow(k2[k2if],2)*Rw[3][6]+k1[k1jf]/k2[k2if]*Rw[3][5]+Rw[3][4]/k2[k2if]+k1[k1jf]*k2[k2if]*Rw[3][3]+pow(k2[k2if],2)*Rw[3][2]+k2[k2if]*Rw[3][1]+k1[k1jf]*Rw[3][0]+
-	2*k2[k2if]*(Rw[2][6]/pow(k2[k2if],2)+Rw[2][5]/k2[k2if]+k2[k2if]*Rw[2][3]+Rw[2][0])+
-	pow(k2[k2if],2)*(-2/pow(k2[k2if],3)*Rw[2][6]-Rw[2][5]/pow(k2[k2if],2)+Rw[2][3])
-	+k2[k2if]*(-2/pow(k2[k2if],3)*Rw[1][6]-Rw[1][5]/pow(k2[k2if],2)+Rw[1][3])
-	+Rw[1][6]/pow(k2[k2if],2)+Rw[1][5]/k2[k2if]+k2[k2if]*Rw[1][3]+Rw[1][0]-2/pow(k2[k2if],3)*Rw[0][7]
-	+k1[k1jf]*(-2/pow(k2[k2if],3)*Rw[0][6]-Rw[0][5]/pow(k2[k2if],2)+Rw[0][3])
-	-2/pow(k2[k2if],3)*k1[k1jf]*Rw[0][6]-k1[k1jf]/pow(k2[k2if],2)*Rw[0][5]-Rw[0][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[0][3]+2*k2[k2if]*Rw[0][2]+Rw[0][1]
-	;
-	h00=
-	2/pow(k2[k2if],2)*(Rw[6][6]/pow(k2[k2if],2)+Rw[6][5]+k2[k2if]*Rw[6][3]+Rw[6][0])+
-	2/k2[k2if]*(Rw[5][6]/pow(k2[k2if],2)+Rw[5][5]/k2[k2if]+k2[k2if]*Rw[5][3]+Rw[5][0])+
-	2*k2[k2if]*(Rw[3][6]/pow(k2[k2if],2)+Rw[3][5]/k2[k2if]+k2[k2if]*Rw[3][3]+Rw[3][0])+
-	2/pow(k2[k2if],2)*Rw[0][6]+2/k2[k2if]*Rw[0][5]+2*k2[k2if]*Rw[0][3]+2*Rw[0][0]
-	;
-	h10=h01;
-	h11=-2*(6*k1[k1jf]/pow(k2[k2if],4)*Rwy[6]+2*k1[k1jf]/pow(k2[k2if],3)*Rwy[5]+2/pow(k2[k2if],3)*Rwy[4]+2*Rwy[2])+
-	+6/(k2[k2if],4)*(Rw[7][7]/pow(k2[k2if],2)+k1[k1jf]/pow(k2[k2if],2)*Rw[7][6]+k1[k1jf]/k2[k2if]*Rw[7][5]+Rw[7][4]/k2[k2if]+k1[k1jf]*k2[k2if]*Rw[7][3]+pow(k2[k2if],2)*Rw[7][2]+k2[k2if]*Rw[7][1]+k1[k1jf]*Rw[7][0])
-	-4/pow(k2[k2if],3)*(-2/pow(k2[k2if],3)*Rw[7][7]-2*k1[k1jf]/pow(k2[k2if],3)*Rw[7][6]-k1[k1jf]/pow(k2[k2if],2)*Rw[7][5]-Rw[7][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[7][3]+2*k2[k2if]*Rw[7][2]+Rw[7][1])
-	+1/pow(k2[k2if],2)*(6/pow(k2[k2if],4)*Rw[7][7]+6*k1[k1jf]/pow(k2[k2if],4)*Rw[7][6]+2*k1[k1jf]/pow(k2[k2if],3)*Rw[7][5]+2/pow(k2[k2if],3)*Rw[7][4]+2*Rw[7][2])
-	+6*k1[k1jf]/pow(k2[k2if],4)*(Rw[6][7]/pow(k2[k2if],2)+k1[k1jf]/pow(k2[k2if],2)*Rw[6][6]+k1[k1jf]/k2[k2if]*Rw[6][5]+Rw[6][4]/k2[k2if]+k1[k1jf]*k2[k2if]*Rw[6][3]+pow(k2[k2if],2)*Rw[6][2]+k2[k2if]*Rw[6][1]+k1[k1jf]*Rw[6][0])
-	-4*k1[k1jf]/pow(k2[k2if],3)*(-2*Rw[6][7]/pow(k2[k2if],3)-2*k1[k1jf]/pow(k2[k2if],3)*Rw[6][6]-k1[k1jf]/pow(k2[k2if],2)*Rw[6][5]-Rw[6][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[6][3]+2*k2[k2if]*Rw[6][2]+Rw[6][1])
-	+k1[k1jf]/pow(k2[k2if],2)*(6/pow(k2[k2if],4)*Rw[6][7]+6*k1[k1jf]/pow(k2[k2if],4)*Rw[6][6]+2*k1[k1jf]/pow(k2[k2if],3)*Rw[6][5]+2/pow(k2[k2if],3)*Rw[6][4]+2*Rw[6][2])
-	+2*k1[k1jf]/pow(k2[k2if],3)*(Rw[5][7]/pow(k2[k2if],2)+k1[k1jf]/pow(k2[k2if],2)*Rw[5][6]+k1[k1jf]/k2[k2if]*Rw[5][5]+Rw[5][4]/k2[k2if]+k1[k1jf]*k2[k2if]*Rw[5][3]+pow(k2[k2if],2)*Rw[5][2]+k2[k2if]*Rw[5][1]+k1[k1jf]*Rw[5][0])
-	-2*k1[k1jf]/pow(k2[k2if],2)*(-2/pow(k2[k2if],3)*Rw[5][7]-2*k1[k1jf]/pow(k2[k2if],3)*Rw[5][6]-k1[k1jf]/pow(k2[k2if],2)*Rw[5][5]-Rw[5][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[5][3]+2*k2[k2if]*Rw[5][2]+Rw[5][1])
-	+k1[k1jf]/k2[k2if]*(6/pow(k2[k2if],4)*Rw[5][7]+6*k1[k1jf]/pow(k2[k2if],4)*Rw[5][6]+2*k1[k1jf]/pow(k2[k2if],3)*Rw[5][5]+2/pow(k2[k2if],3)*Rw[5][4]+2*Rw[5][2])	
-	+2/pow(k2[k2if],3)*(Rw[4][7]/pow(k2[k2if],2)+k1[k1jf]/pow(k2[k2if],2)*Rw[4][6]+k1[k1jf]/k2[k2if]*Rw[4][5]+Rw[4][4]/k2[k2if]+k1[k1jf]*k2[k2if]*Rw[4][3]+pow(k2[k2if],2)*Rw[4][2]+k2[k2if]*Rw[4][1]+k1[k1jf]*Rw[4][0])
-	-2/pow(k2[k2if],2)*(-2/pow(k2[k2if],3)*Rw[4][7]-2*k1[k1jf]/pow(k2[k2if],3)*Rw[4][6]-k1[k1jf]/pow(k2[k2if],2)*Rw[4][5]-Rw[4][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[4][3]+2*k2[k2if]*Rw[4][2]+Rw[4][1])
-	+1/k2[k2if]*(6/pow(k2[k2if],4)*Rw[4][7]+6*k1[k1jf]/pow(k2[k2if],4)*Rw[4][6]+2*k1[k1jf]*pow(k2[k2if],3)*Rw[4][5]+2/pow(k2[k2if],3)*Rw[4][4]+2*Rw[4][2])
-	+2*k1[k1jf]*(-2/pow(k2[k2if],3)*Rw[3][7]-2*k1[k1jf]/pow(k2[k2if],3)*Rw[3][6]-k1[k1jf]/pow(k2[k2if],2)*Rw[3][5]-Rw[3][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[3][3]+2*k2[k2if]*Rw[3][2]+Rw[3][1])
-	+k1[k1jf]*k2[k2if]*(6/pow(k2[k2if],4)*Rw[3][7]+6*k1[k1jf]/pow(k2[k2if],4)*Rw[3][6]+2*k1[k1jf]/pow(k2[k2if],3)*Rw[3][5]+2/pow(k2[k2if],3)*Rw[3][4]+2*Rw[3][2])
-	+2*(Rw[2][7]/pow(k2[k2if],2)+k1[k1jf]/pow(k2[k2if],2)*Rw[2][6]+k1[k1jf]/k2[k2if]*Rw[2][5]+Rw[2][4]/k2[k2if]+k1[k1jf]*k2[k2if]*Rw[2][3]+pow(k2[k2if],2)*Rw[2][2]+k2[k2if]*Rw[2][1]+k1[k1jf]*Rw[2][0])
-	+4*k2[k2if]*(-2/pow(k2[k2if],3)*Rw[2][7]-2*k1[k1jf]/pow(k2[k2if],3)*Rw[2][6]-k1[k1jf]/pow(k2[k2if],2)*Rw[2][5]-Rw[2][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[2][3]+2*k2[k2if]*Rw[2][2]+Rw[2][1])
-	+pow(k2[k2if],2)*(6/pow(k2[k2if],4)*Rw[2][7]+6*k1[k1jf]/pow(k2[k2if],4)*Rw[2][6]+2*k1[k1jf]/pow(k2[k2if],3)*Rw[2][5]+2/pow(k2[k2if],3)*Rw[2][4]+2*Rw[2][2])
-	+k2[k2if]*(6/pow(k2[k2if],4)*Rw[1][7]+6*k1[k1jf]/pow(k2[k2if],4)*Rw[1][6]+2*k1[k1jf]/pow(k2[k2if],3)*Rw[1][5]+2/pow(k2[k2if],3)*Rw[1][4]+2*Rw[1][2])
-	-4/pow(k2[k2if],3)*Rw[1][7]-4*k1[k1jf]/pow(k2[k2if],3)*Rw[1][6]-2*k1[k1jf]/pow(k2[k2if],2)*Rw[1][5]-2/pow(k2[k2if],2)*Rw[1][4]+2*k1[k1jf]*Rw[1][3]+4*k2[k2if]*Rw[1][2]+2*Rw[1][1]+
-	k1[k1jf]*(6/pow(k2[k2if],4)*Rw[0][7]+6*k1[k1jf]/pow(k2[k2if],4)*Rw[0][6]+2*k1[k1jf]/pow(k2[k2if],3)*Rw[0][5]+2/pow(k2[k2if],3)*Rw[0][4]+2*Rw[0][2] );
-	hessian.open("hessian.txt");
-	hessian <<"hessiann:"<<(h00*h11-h01*h10)<<"h00:"<<h00<<"h11:"<<h11<<"h10:"<<h01<<endl;
+		/*h00=                                                           
+		  2/pow(k2[k2if],2)*(Rw[6][6]/pow(k2[k2if],2)+Rw[6][5]/k2[k2if]+k2[k2if]*Rw[6][3]+Rw[6][0])
+		  +2/k2[k2if]*(Rw[5][6]/pow(k2[k2if],2)+Rw[5][5]/k2[k2if]+k2[k2if]*Rw[5][3]+Rw[5][0])            
+		  +2*k2[k2if]*(Rw[3][6]/pow(k2[k2if],2)+Rw[3][5]/k2[k2if]+k2[k2if]*Rw[3][3]+Rw[3][0])+
+		  2*Rw[0][6]/pow(k2[k2if],2)+2*Rw[0][5]/k2[k2if]+2*k2[k2if]*Rw[0][3] +2*Rw[0][0];
+		  */                               
+										
+		 h01=
+		-2*(-2*Rwy[6]/pow(k2[k2if],3)-Rwy[5]/pow(k2[k2if],2)+Rwy[3])
+		-2/pow(k2[k2if],3)*(Rw[7][6]/pow(k2[k2if],2)+Rw[7][5]/k2[k2if]+k2[k2if]*Rw[7][3]+Rw[7][0])
+		+1/pow(k2[k2if],2)*(-2*Rw[7][6]/pow(k2[k2if],3)-Rw[7][5]/pow(k2[k2if],2)+Rw[7][3])
+		-2/pow(k2[k2if],3)*(Rw[6][7]/pow(k2[k2if],2)+k1[k1jf]*Rw[6][6]/pow(k2[k2if],2)+k1[k1jf]*Rw[6][5]/k2[k2if]+Rw[6][4]/k2[k2if]+k1[k1jf]*k2[k2if]*Rw[6][3]+pow(k2[k2if],2)*Rw[6][2]+k2[k2if]*Rw[6][1]+k1[k1jf]*Rw[6][0])
+		+1/pow(k2[k2if],2)*(-2*Rw[6][7]/pow(k2[k2if],3)-2*k1[k1jf]*Rw[6][6]/pow(k2[k2if],3)-k1[k1jf]*Rw[6][5]/pow(k2[k2if],2)-Rw[6][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[6][3]+2*k2[k2if]*Rw[6][2]+Rw[6][1])
+		-2*k1[k1jf]/pow(k2[k2if],3)*(Rw[6][6]/pow(k2[k2if],2)+Rw[6][5]/k2[k2if]+k2[k2if]*Rw[6][3]+Rw[6][0])
+		+k1[k1jf]/pow(k2[k2if],2)*(-2*Rw[6][6]/pow(k2[k2if],3)-Rw[6][5]/pow(k2[k2if],2)+Rw[6][3])
+		-1/pow(k2[k2if],2)*(Rw[5][7]/pow(k2[k2if],2)+k1[k1jf]*Rw[5][6]/pow(k2[k2if],2)+k1[k1jf]*Rw[5][5]/k2[k2if]+Rw[5][4]/k2[k2if]+k1[k1jf]*k2[k2if]*Rw[5][3]+pow(k2[k2if],2)*Rw[5][2]+k2[k2if]*Rw[5][1]+k1[k1jf]*Rw[5][0])
+		+1/k2[k2if]*(-2*Rw[5][7]/pow(k2[k2if],3)-2*k1[k1jf]/pow(k2[k2if],3)*Rw[5][6]-((k1[k1jf])/pow(k2[k2if],2))*Rw[5][5]-Rw[5][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[5][3]+2*k2[k2if]*Rw[5][2]+Rw[5][1])
+		-k1[k1jf]/pow(k2[k2if],2)*(Rw[5][6]/pow(k2[k2if],2)+Rw[5][5]/k2[k2if]+k2[k2if]*Rw[5][3]+Rw[5][0])
+		+k1[k1jf]/k2[k2if]*(-2*Rw[5][6]/pow(k2[k2if],3)-Rw[5][5]/pow(k2[k2if],2)+Rw[5][3])
+		-1/pow(k2[k2if],2)*(Rw[4][6]/pow(k2[k2if],2)+Rw[4][5]/k2[k2if]+k2[k2if]*Rw[4][3]+Rw[4][0])
+		+1/k2[k2if]*(-2*Rw[4][6]/pow(k2[k2if],3)-Rw[4][5]/pow(k2[k2if],2)+Rw[4][3])
+		+k2[k2if]*(-2/pow(k2[k2if],3)*Rw[3][7]-2/pow(k2[k2if],3)*k1[k1jf]*Rw[3][6]-k1[k1jf]/pow(k2[k2if],2)*Rw[3][5]-Rw[3][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[3][3]+2*k2[k2if]*Rw[3][2]+Rw[3][1])
+		+Rw[3][7]/pow(k2[k2if],2)
+		+k1[k1jf]*(Rw[3][6]/pow(k2[k2if],2)+Rw[3][5]/k2[k2if]+k2[k2if]*Rw[3][3]+Rw[3][0])
+		+k1[k1jf]*k2[k2if]*(-2/pow(k2[k2if],3)*Rw[3][6]-Rw[3][5]/pow(k2[k2if],2)+Rw[3][3])
+		+k1[k1jf]/pow(k2[k2if],2)*Rw[3][6]+k1[k1jf]/k2[k2if]*Rw[3][5]+Rw[3][4]/k2[k2if]+k1[k1jf]*k2[k2if]*Rw[3][3]+pow(k2[k2if],2)*Rw[3][2]+k2[k2if]*Rw[3][1]+k1[k1jf]*Rw[3][0]+
+		2*k2[k2if]*(Rw[2][6]/pow(k2[k2if],2)+Rw[2][5]/k2[k2if]+k2[k2if]*Rw[2][3]+Rw[2][0])+
+		pow(k2[k2if],2)*(-2/pow(k2[k2if],3)*Rw[2][6]-Rw[2][5]/pow(k2[k2if],2)+Rw[2][3])
+		+k2[k2if]*(-2/pow(k2[k2if],3)*Rw[1][6]-Rw[1][5]/pow(k2[k2if],2)+Rw[1][3])
+		+Rw[1][6]/pow(k2[k2if],2)+Rw[1][5]/k2[k2if]+k2[k2if]*Rw[1][3]+Rw[1][0]-2/pow(k2[k2if],3)*Rw[0][7]
+		+k1[k1jf]*(-2/pow(k2[k2if],3)*Rw[0][6]-Rw[0][5]/pow(k2[k2if],2)+Rw[0][3])
+		-2/pow(k2[k2if],3)*k1[k1jf]*Rw[0][6]-k1[k1jf]/pow(k2[k2if],2)*Rw[0][5]-Rw[0][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[0][3]+2*k2[k2if]*Rw[0][2]+Rw[0][1]
+		;
+		h00=
+		2/pow(k2[k2if],2)*(Rw[6][6]/pow(k2[k2if],2)+Rw[6][5]+k2[k2if]*Rw[6][3]+Rw[6][0])+
+		2/k2[k2if]*(Rw[5][6]/pow(k2[k2if],2)+Rw[5][5]/k2[k2if]+k2[k2if]*Rw[5][3]+Rw[5][0])+
+		2*k2[k2if]*(Rw[3][6]/pow(k2[k2if],2)+Rw[3][5]/k2[k2if]+k2[k2if]*Rw[3][3]+Rw[3][0])+
+		2/pow(k2[k2if],2)*Rw[0][6]+2/k2[k2if]*Rw[0][5]+2*k2[k2if]*Rw[0][3]+2*Rw[0][0]
+		;
+		h10=h01;
+		h11=-2*(6*k1[k1jf]/pow(k2[k2if],4)*Rwy[6]+2*k1[k1jf]/pow(k2[k2if],3)*Rwy[5]+2/pow(k2[k2if],3)*Rwy[4]+2*Rwy[2])+
+		+6/(k2[k2if],4)*(Rw[7][7]/pow(k2[k2if],2)+k1[k1jf]/pow(k2[k2if],2)*Rw[7][6]+k1[k1jf]/k2[k2if]*Rw[7][5]+Rw[7][4]/k2[k2if]+k1[k1jf]*k2[k2if]*Rw[7][3]+pow(k2[k2if],2)*Rw[7][2]+k2[k2if]*Rw[7][1]+k1[k1jf]*Rw[7][0])
+		-4/pow(k2[k2if],3)*(-2/pow(k2[k2if],3)*Rw[7][7]-2*k1[k1jf]/pow(k2[k2if],3)*Rw[7][6]-k1[k1jf]/pow(k2[k2if],2)*Rw[7][5]-Rw[7][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[7][3]+2*k2[k2if]*Rw[7][2]+Rw[7][1])
+		+1/pow(k2[k2if],2)*(6/pow(k2[k2if],4)*Rw[7][7]+6*k1[k1jf]/pow(k2[k2if],4)*Rw[7][6]+2*k1[k1jf]/pow(k2[k2if],3)*Rw[7][5]+2/pow(k2[k2if],3)*Rw[7][4]+2*Rw[7][2])
+		+6*k1[k1jf]/pow(k2[k2if],4)*(Rw[6][7]/pow(k2[k2if],2)+k1[k1jf]/pow(k2[k2if],2)*Rw[6][6]+k1[k1jf]/k2[k2if]*Rw[6][5]+Rw[6][4]/k2[k2if]+k1[k1jf]*k2[k2if]*Rw[6][3]+pow(k2[k2if],2)*Rw[6][2]+k2[k2if]*Rw[6][1]+k1[k1jf]*Rw[6][0])
+		-4*k1[k1jf]/pow(k2[k2if],3)*(-2*Rw[6][7]/pow(k2[k2if],3)-2*k1[k1jf]/pow(k2[k2if],3)*Rw[6][6]-k1[k1jf]/pow(k2[k2if],2)*Rw[6][5]-Rw[6][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[6][3]+2*k2[k2if]*Rw[6][2]+Rw[6][1])
+		+k1[k1jf]/pow(k2[k2if],2)*(6/pow(k2[k2if],4)*Rw[6][7]+6*k1[k1jf]/pow(k2[k2if],4)*Rw[6][6]+2*k1[k1jf]/pow(k2[k2if],3)*Rw[6][5]+2/pow(k2[k2if],3)*Rw[6][4]+2*Rw[6][2])
+		+2*k1[k1jf]/pow(k2[k2if],3)*(Rw[5][7]/pow(k2[k2if],2)+k1[k1jf]/pow(k2[k2if],2)*Rw[5][6]+k1[k1jf]/k2[k2if]*Rw[5][5]+Rw[5][4]/k2[k2if]+k1[k1jf]*k2[k2if]*Rw[5][3]+pow(k2[k2if],2)*Rw[5][2]+k2[k2if]*Rw[5][1]+k1[k1jf]*Rw[5][0])
+		-2*k1[k1jf]/pow(k2[k2if],2)*(-2/pow(k2[k2if],3)*Rw[5][7]-2*k1[k1jf]/pow(k2[k2if],3)*Rw[5][6]-k1[k1jf]/pow(k2[k2if],2)*Rw[5][5]-Rw[5][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[5][3]+2*k2[k2if]*Rw[5][2]+Rw[5][1])
+		+k1[k1jf]/k2[k2if]*(6/pow(k2[k2if],4)*Rw[5][7]+6*k1[k1jf]/pow(k2[k2if],4)*Rw[5][6]+2*k1[k1jf]/pow(k2[k2if],3)*Rw[5][5]+2/pow(k2[k2if],3)*Rw[5][4]+2*Rw[5][2])	
+		+2/pow(k2[k2if],3)*(Rw[4][7]/pow(k2[k2if],2)+k1[k1jf]/pow(k2[k2if],2)*Rw[4][6]+k1[k1jf]/k2[k2if]*Rw[4][5]+Rw[4][4]/k2[k2if]+k1[k1jf]*k2[k2if]*Rw[4][3]+pow(k2[k2if],2)*Rw[4][2]+k2[k2if]*Rw[4][1]+k1[k1jf]*Rw[4][0])
+		-2/pow(k2[k2if],2)*(-2/pow(k2[k2if],3)*Rw[4][7]-2*k1[k1jf]/pow(k2[k2if],3)*Rw[4][6]-k1[k1jf]/pow(k2[k2if],2)*Rw[4][5]-Rw[4][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[4][3]+2*k2[k2if]*Rw[4][2]+Rw[4][1])
+		+1/k2[k2if]*(6/pow(k2[k2if],4)*Rw[4][7]+6*k1[k1jf]/pow(k2[k2if],4)*Rw[4][6]+2*k1[k1jf]*pow(k2[k2if],3)*Rw[4][5]+2/pow(k2[k2if],3)*Rw[4][4]+2*Rw[4][2])
+		+2*k1[k1jf]*(-2/pow(k2[k2if],3)*Rw[3][7]-2*k1[k1jf]/pow(k2[k2if],3)*Rw[3][6]-k1[k1jf]/pow(k2[k2if],2)*Rw[3][5]-Rw[3][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[3][3]+2*k2[k2if]*Rw[3][2]+Rw[3][1])
+		+k1[k1jf]*k2[k2if]*(6/pow(k2[k2if],4)*Rw[3][7]+6*k1[k1jf]/pow(k2[k2if],4)*Rw[3][6]+2*k1[k1jf]/pow(k2[k2if],3)*Rw[3][5]+2/pow(k2[k2if],3)*Rw[3][4]+2*Rw[3][2])
+		+2*(Rw[2][7]/pow(k2[k2if],2)+k1[k1jf]/pow(k2[k2if],2)*Rw[2][6]+k1[k1jf]/k2[k2if]*Rw[2][5]+Rw[2][4]/k2[k2if]+k1[k1jf]*k2[k2if]*Rw[2][3]+pow(k2[k2if],2)*Rw[2][2]+k2[k2if]*Rw[2][1]+k1[k1jf]*Rw[2][0])
+		+4*k2[k2if]*(-2/pow(k2[k2if],3)*Rw[2][7]-2*k1[k1jf]/pow(k2[k2if],3)*Rw[2][6]-k1[k1jf]/pow(k2[k2if],2)*Rw[2][5]-Rw[2][4]/pow(k2[k2if],2)+k1[k1jf]*Rw[2][3]+2*k2[k2if]*Rw[2][2]+Rw[2][1])
+		+pow(k2[k2if],2)*(6/pow(k2[k2if],4)*Rw[2][7]+6*k1[k1jf]/pow(k2[k2if],4)*Rw[2][6]+2*k1[k1jf]/pow(k2[k2if],3)*Rw[2][5]+2/pow(k2[k2if],3)*Rw[2][4]+2*Rw[2][2])
+		+k2[k2if]*(6/pow(k2[k2if],4)*Rw[1][7]+6*k1[k1jf]/pow(k2[k2if],4)*Rw[1][6]+2*k1[k1jf]/pow(k2[k2if],3)*Rw[1][5]+2/pow(k2[k2if],3)*Rw[1][4]+2*Rw[1][2])
+		-4/pow(k2[k2if],3)*Rw[1][7]-4*k1[k1jf]/pow(k2[k2if],3)*Rw[1][6]-2*k1[k1jf]/pow(k2[k2if],2)*Rw[1][5]-2/pow(k2[k2if],2)*Rw[1][4]+2*k1[k1jf]*Rw[1][3]+4*k2[k2if]*Rw[1][2]+2*Rw[1][1]+
+		k1[k1jf]*(6/pow(k2[k2if],4)*Rw[0][7]+6*k1[k1jf]/pow(k2[k2if],4)*Rw[0][6]+2*k1[k1jf]/pow(k2[k2if],3)*Rw[0][5]+2/pow(k2[k2if],3)*Rw[0][4]+2*Rw[0][2] );
+		hessian.open("hessian.txt");
+		hessian <<"hessiann:"<<(h00*h11-h01*h10)<<"h00:"<<h00<<"h11:"<<h11<<"h10:"<<h01<<endl;
+	
+		return min_Ep2__k1_j__k2_i;
+	}else {cout<<"nenhum positivo"<<endl;return 0;};
 };
 // find min in Ep2__k1_j__k2_i;
 //public:
@@ -504,10 +510,14 @@ Rs_Tr::~Rs_Tr(){};
 void Rs_Tr::Rs_Tr_do_it(){
 //double Trrr=0; double Rsss=0;
 if (Y_W_::n==3){
-Rs_Tr::do_it();
+float E_2;
+E_2=Rs_Tr::do_it();
+PEI* pei;
+pei=new PEI(k1[k1jf],k2[k2if],E_2,Ry/*TODO insert in b's*/,Rwy[0],Rwy[1],Rwy[2],Rwy[3],Rwy[4],Rwy[5],Rwy[6],Rwy[7],Rw[0][0],Rw[0][1],Rw[0][2],Rw[0][3],Rw[0][4],Rw[0][5],Rw[0][6],Rw[0][7],Rw[1][0],Rw[1][1],Rw[1][2],Rw[1][3],Rw[1][4],Rw[1][5],Rw[1][6],Rw[1][7],Rw[2][0],Rw[2][1],Rw[2][2],Rw[2][3],Rw[2][4],Rw[2][5],Rw[2][6],Rw[2][7],Rw[3][0],Rw[3][1],Rw[3][2],Rw[3][3],Rw[3][4],Rw[3][5],Rw[3][6],Rw[3][7],Rw[4][0],Rw[4][1],Rw[4][2],Rw[4][3],Rw[4][4],Rw[4][5],Rw[4][6],Rw[4][7],Rw[5][0],Rw[5][1],Rw[5][2],Rw[5][3],Rw[5][4],Rw[5][5],Rw[5][6],Rw[5][7],Rw[6][0],Rw[6][1],Rw[6][2],Rw[6][3],Rw[6][4],Rw[6][5],Rw[6][6],Rw[6][7],Rw[7][0],Rw[7][1],Rw[7][2],Rw[7][3],Rw[7][4],Rw[7][5],Rw[7][6],Rw[7][7]);
 //cout<<"nada"<<endl;
-if ((h00*h11-h01*h10)>0 && !isinf(h00*h11-h01*h10))//TODO
+if ((h00*h11-h01*h10)>0 && !isinf(h00*h11-h01*h10)&&zeros_pol==true)//TODO
 {
+pei->get_dek2_pol();
 Trr=(1/k2[k2if]);
 Rss=(ro*Ls*k1[k1jf]-(1-ro)*Ls*k2[k2if]);//TODO
 };
