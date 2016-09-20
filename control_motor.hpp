@@ -54,28 +54,28 @@ using namespace Maths;
 #define torque_control_d 0//?
 #define torque_control_Min_pid_res (-150)//?
 #define torque_control_Max_pid_res 150//?
-#define torque_control_cel 3000//?
+#define torque_control_cel 300//?
 
 #define current_control_y_p 1//0.7//10//?
 #define current_control_y_i 0.000625//0.0625//?
 #define current_control_y_d 0//?
 #define current_control_y_Min_pid_res (-200)//100?
 #define current_control_y_Max_pid_res 200//100?
-#define current_control_y_cel 3000//?
+#define current_control_y_cel 300//?
 
 #define flux_control_p 1//0.6///1?
 #define flux_control_i 0.00625
 #define flux_control_d 0//?
 #define flux_control_Min_pid_res (-100)//?
 #define flux_control_Max_pid_res 100//?
-#define flux_control_cel 3000//?
+#define flux_control_cel 300//?
 
 #define current_control_x_p 1//0.7//10//?
 #define current_control_x_i 0.000625//0.0625//?
 #define current_control_x_d 0//?
 #define current_control_x_Min_pid_res (-200)//100?
 #define current_control_x_Max_pid_res 200//100?
-#define current_control_x_cel 3000//?
+#define current_control_x_cel 300//?
 ofstream fTorque ("torque.txt");
 ofstream fVel ("speed.txt");
 ofstream fImr ("Imr.txt");

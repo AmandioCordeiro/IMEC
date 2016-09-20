@@ -18,6 +18,7 @@ using namespace std;
 //*******
 //filter
 //***********
+#define Trrr 0.17703
 #define per 0.0001  ///////especificar periodo de amostragem dede  filter_num_dif
 #define fhz 60//50//?? 50 ??
 
@@ -48,7 +49,7 @@ using namespace std;
 //double roLs;//0.013998//ro*Ls
 //double MB;//0.69851//B*M
 //ouble one_p_MB;//1.69851//1+MrB
-
+//double Tr_calc_gl;
 extern bool	zeros_pol;
 class Y_W_{
 protected:

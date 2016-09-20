@@ -518,7 +518,7 @@ pei=new PEI(k1[k1jf],k2[k2if],E_2,Ry/*TODO insert in b's*/,Rwy[0],Rwy[1],Rwy[2],
 if ((h00*h11-h01*h10)>0 && !isinf(h00*h11-h01*h10)&&zeros_pol==true)//TODO
 {
 pei->get_dek2_pol();
-Trr=(1/k2[k2if]);
+if((1/k2[k2if])<1.2*Trrr&&(1/k2[k2if])>0.8*Trrr)Trr=(1/k2[k2if]);
 Rss=(ro*Ls*k1[k1jf]-(1-ro)*Ls*k2[k2if]);//TODO
 };
 };

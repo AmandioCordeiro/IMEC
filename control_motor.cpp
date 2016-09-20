@@ -20,6 +20,7 @@
 #include "control_motor.hpp"
 #define T  0.0001
 extern double Tr_calc_gl;
+
 ofstream Tr ("Tr.txt");
 extern double M;//0.050382//0.0117//0.069312//mutual inductance
 extern double Ls;//0.051195//0.014//0.07132
@@ -291,7 +292,7 @@ cout<<"imrref_"<<imrref<<endl;
 				c=0;
 				//signal_Tr;//TODO
 				std::thread t1((ConstantTr()),std::move(ConstTr),std::move(this));
-				t1.join();
+				t1.detach/*join*/();
 				};
 			}		;
 ////---------------------------	
