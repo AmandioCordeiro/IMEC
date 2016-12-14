@@ -13,7 +13,7 @@ using namespace std;
 //filter
 
 //*********
-double Tr_calc_gl=0.17703;
+double Tr_calc_gl;
 extern ofstream Tr ;
 double M=/*0.51233;*/0.050382;//0.0117//0.069312//mutual inductance
 double Ls=/*(0.00845+M);*/0.051195;//0.014//0.07132
@@ -504,27 +504,29 @@ update_r_k2();//alteradoOOOOOOO criar construtores nos construtores das classes 
 };
 // find min in Ep2__k1_j__k2_i;
 //public:
-Rs_Tr::Rs_Tr():k1jf(0),k2if(0),r_k2(){};
+Rs_Tr::Rs_Tr(double Tr):k1jf(0),k2if(0),r_k2(){Trr=Tr;};
 Rs_Tr::~Rs_Tr(){};
 //k1=k1[k1jf];k2=k2[k2if];
 void Rs_Tr::Rs_Tr_do_it(){
-//double Trrr=0; double Rsss=0;
-if (Y_W_::n==3){
-float E_2;
-E_2=Rs_Tr::do_it();
-PEI* pei;
-pei=new PEI(k1[k1jf],k2[k2if],E_2,Ry/*TODO insert in b's*/,Rwy[0],Rwy[1],Rwy[2],Rwy[3],Rwy[4],Rwy[5],Rwy[6],Rwy[7],Rw[0][0],Rw[0][1],Rw[0][2],Rw[0][3],Rw[0][4],Rw[0][5],Rw[0][6],Rw[0][7],Rw[1][0],Rw[1][1],Rw[1][2],Rw[1][3],Rw[1][4],Rw[1][5],Rw[1][6],Rw[1][7],Rw[2][0],Rw[2][1],Rw[2][2],Rw[2][3],Rw[2][4],Rw[2][5],Rw[2][6],Rw[2][7],Rw[3][0],Rw[3][1],Rw[3][2],Rw[3][3],Rw[3][4],Rw[3][5],Rw[3][6],Rw[3][7],Rw[4][0],Rw[4][1],Rw[4][2],Rw[4][3],Rw[4][4],Rw[4][5],Rw[4][6],Rw[4][7],Rw[5][0],Rw[5][1],Rw[5][2],Rw[5][3],Rw[5][4],Rw[5][5],Rw[5][6],Rw[5][7],Rw[6][0],Rw[6][1],Rw[6][2],Rw[6][3],Rw[6][4],Rw[6][5],Rw[6][6],Rw[6][7],Rw[7][0],Rw[7][1],Rw[7][2],Rw[7][3],Rw[7][4],Rw[7][5],Rw[7][6],Rw[7][7]);
-//cout<<"nada"<<endl;
-if ((h00*h11-h01*h10)>0 && !isinf(h00*h11-h01*h10)&&zeros_pol==true)//TODO
-{
-pei->get_dek2_pol();
-if((1/k2[k2if])<1.2*Trrr&&(1/k2[k2if])>0.8*Trrr)Trr=(1/k2[k2if]);
-Rss=(ro*Ls*k1[k1jf]-(1-ro)*Ls*k2[k2if]);//TODO
-};
-};
-//else {
-//cout<<"nnn"<<Y_W_::n<<endl;
-//Trrr=Trr;Rsss=Rss;};
+	//double Trrr=0; double Rsss=0;
+	if (Y_W_::n==3){
+		float E_2;
+		E_2=Rs_Tr::do_it();
+		PEI* pei;
+		pei=new PEI(k1[k1jf],k2[k2if],E_2,Ry/*TODO insert in b's*/,Rwy[0],Rwy[1],Rwy[2],Rwy[3],Rwy[4],Rwy[5],Rwy[6],Rwy[7],Rw[0][0],Rw[0][1],Rw[0][2],Rw[0][3],Rw[0][4],Rw[0][5],Rw[0][6],Rw[0][7],Rw[1][0],Rw[1][1],Rw[1][2],Rw[1][3],Rw[1][4],Rw[1][5],Rw[1][6],Rw[1][7],Rw[2][0],Rw[2][1],Rw[2][2],Rw[2][3],Rw[2][4],Rw[2][5],Rw[2][6],Rw[2][7],Rw[3][0],Rw[3][1],Rw[3][2],Rw[3][3],Rw[3][4],Rw[3][5],Rw[3][6],Rw[3][7],Rw[4][0],Rw[4][1],Rw[4][2],Rw[4][3],Rw[4][4],Rw[4][5],Rw[4][6],Rw[4][7],Rw[5][0],Rw[5][1],Rw[5][2],Rw[5][3],Rw[5][4],Rw[5][5],Rw[5][6],Rw[5][7],Rw[6][0],Rw[6][1],Rw[6][2],Rw[6][3],Rw[6][4],Rw[6][5],Rw[6][6],Rw[6][7],Rw[7][0],Rw[7][1],Rw[7][2],Rw[7][3],Rw[7][4],Rw[7][5],Rw[7][6],Rw[7][7]);
+		//cout<<"nada"<<endl;
+		if ((h00*h11-h01*h10)>0 && !isinf(h00*h11-h01*h10)&&zeros_pol==true)//TODO
+		{
+			pei->get_dek2_pol();
+			if((1/k2[k2if])<1.3*Trrr&&(1/k2[k2if])>0.7*Trrr){
+				Trr=(1/k2[k2if]);Tr_calc_gl=Trr;}
+			else Trr=Tr_calc_gl;
+			Rss=(ro*Ls*k1[k1jf]-(1-ro)*Ls*k2[k2if]);//TODO
+		};
+	};
+	//else {
+	//cout<<"nnn"<<Y_W_::n<<endl;
+	//Trrr=Trr;Rsss=Rss;};
 };
 double Rs_Tr::get_Rs(){
 //if (Y_W_::n==3)

@@ -163,7 +163,7 @@ void motor::set_theta_r(double t){theta_r=t;};
 		return (InvClarkePark(np*theta_r/*2*PI*fhz*n()*T*/,tTwoPhaseDQ (ids,iqs)).c);
 	};
 	void motor::set_torq_L(double torque){torq_L=torque;};
-void motor::set_Tr_calc_gl(double r){Tr_calc_gl=r;};
+void motor::set_Tr_calc_gl(double r,double * Tr_calc_glo){*Tr_calc_glo=r;};
 void motor::set_Rs(double rr){Rs=rr;};
 	double motor::get_torq_L(){return torq_L;};
 	double motor::get_wr(){return wr;};
@@ -187,7 +187,7 @@ double motor::get_Rs(){return Rs;};
 	//double rot_fl_an;
 
 	//filter f;
-	//Rs_Tr ConstTr;
+	//Rs_Tr get_Tr;
 //	long nn;//(nn*T)
 	/*SlipAngle angle;
 	tThreePhase abc_current;
@@ -201,6 +201,7 @@ double motor::get_Rs(){return Rs;};
 	//double w_ref;
 
 	control_loops::control_loops():c(0),imrref(0.0),angle(0.0),abc_current(0.0,0.0,0.0),abc_voltage(0.0,0.0,0.0),IDQ(0.0001,0.0001),VDQ(0.0,0.0),rot_fl_an(0.0),Theta_r(0.0),w_ref(0.0),V(0.0,0.0),IDQ_rotor(0.0,0.0),VDQ_rotor(0.0,0.0){
+			Tr_calc_gl=0.17703;
 			vel.tune_pid(vel_p,vel_i,vel_d);/*vector <Rs_Tr> ConstTr(100,Rs_Tr())*/;ConstTr=nullptr;
 			torque_control.tune_pid(torque_control_p,torque_control_i,torque_control_d);
 			current_control_y.tune_pid(current_control_y_p,current_control_y_i,current_control_y_d);
@@ -222,19 +223,22 @@ double motor::get_Rs(){return Rs;};
 		//cout<<"Theta_r*np"<<(Theta_r_np)<<endl;//adapt after 2PI; electrical?
 	}
 	
-	/*void control_loops::*/class ConstantTr/*(Rs_Tr * ConstTr_)*/{
+/*void control_loops::*/class ConstantTr/*(Rs_Tr * ConstTr_)*/{
 		////-------estimacao de TR:	
 				public:
 					void operator()(Rs_Tr * ConstTr_,control_loops * thiss){
-				//vector<Rs_Tr >::iterator it = ConstTr.end();it--;
-		//	/*	if ((1.05*velo)>(motor::wr)&&(velo*0.95)<(motor::wr)){*/
-				ConstTr_->Rs_Tr_do_it();
-				/*se for maior ou menor que 1+-7%*/
-				thiss->set_Tr_calc_gl(ConstTr_->get_Tr());/*motor::Rs=ConstTr->get_Rs();*/cout<<"TR::::"<<ConstTr_->get_Tr()<<endl/*<<"Rs:"<<motor::Rs<<endl*/;double R=ConstTr_->get_Rs();double TT=ConstTr_->get_Tr();Tr<<"TR::::"<<TT<<"RS"<<R<<endl;
-				//};
-				delete ConstTr_;Tr<<"before nullptr"<<ConstTr_<<endl;ConstTr_=nullptr;Tr<<ConstTr_<<endl;
-		//TODO
-	};
+					//vector<Rs_Tr >::iterator it = ConstTr.end();it--;
+			//	/*	if ((1.05*velo)>(motor::wr)&&(velo*0.95)<(motor::wr)){*/
+					ConstTr_->Rs_Tr_do_it();
+					/*se for maior ou menor que 1+-7%*/
+					/*motor::Rs=ConstTr->get_Rs();*/cout<<"TR::::"<<ConstTr_->get_Tr()<<endl/*<<"Rs:"<<motor::Rs<<endl*/;double R=ConstTr_->get_Rs();double TT=ConstTr_->get_Tr();Tr<<"TR::::"<<TT<<"RS"<<R<<endl;
+					//};
+					delete ConstTr_;
+					Tr<<"before nullptr"<<ConstTr_<<endl;
+					ConstTr_=nullptr;
+					Tr<<ConstTr_<<endl;
+			//TODO
+					};
 	};
 //std::thread control_loops::thread_Tr() {//TODO-retirar?
 //          return std::thread([=] {control_loops::ConstantTr(); });
@@ -256,7 +260,7 @@ double motor::get_Rs(){return Rs;};
 				flux_control.calc_pid();
 			current_control_x.init_pid(IDQ.d,flux_control.get_pid_result(),current_control_x_Min_pid_res,current_control_x_Max_pid_res ,current_control_x_cel);
 				current_control_x.calc_pid();
-cout<<"imrref_"<<imrref<<endl;
+		cout<<"imrref_"<<imrref<<endl;
 					VDQ.q=current_control_y.get_pid_result();cout<<"VDQ.q:"<<VDQ.q<<endl;//se necessario reduzir codigo podesse eliminar vdq?
 
 // isd.init_pid(IDQ.d,(90/*-5*w_ref*w_ref*w_ref+56*w_ref*w_ref-209*w_ref+300*/)/*TODO:(30%nominal)*/,current_control_y_Min_pid_res,current_control_y_Max_pid_res ,current_control_y_cel);
@@ -265,8 +269,8 @@ cout<<"imrref_"<<imrref<<endl;
 				//reset?integral
 
 //+Vdecouple-------------tudo:srea necessario com a Tr corregida			
-	VDQ.d=VDQ.d-angle.get_wm()*Lsro*IDQ.q;				
-	VDQ.q=VDQ.q+angle.get_wm()*Lsro*IDQ.d+(Ls-Lsro)*angle.get_wm()*angle.get_imr();
+		VDQ.d=VDQ.d-angle.get_wm()*Lsro*IDQ.q;				
+		VDQ.q=VDQ.q+angle.get_wm()*Lsro*IDQ.d+(Ls-Lsro)*angle.get_wm()*angle.get_imr();
 
 			}
 		else{
@@ -279,7 +283,8 @@ cout<<"imrref_"<<imrref<<endl;
 			//signal_Tr;//start_thread_Tr();//TODO??
 			if(n>5000){
 				if(c==0){
-					velo=motor::wr; ConstTr=new Rs_Tr();//Rs_Tr f;ConstTr.push_back(f);
+					velo=motor::wr; 
+					ConstTr=new Rs_Tr(Tr_calc_gl);//TODO: 
 					//motor::set_Tr_calc((motor::get_Tr_calc()));
 					Tr<<"new"<<ConstTr<<endl;
 				};

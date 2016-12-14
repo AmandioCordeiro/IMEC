@@ -103,7 +103,7 @@ float h01,h10,h00,h11;
 
 // find min in Ep2__k1_j__k2_i;
 public:
-Rs_Tr();
+Rs_Tr(double Tr);
 ~Rs_Tr();
 float do_it();//tornado publico somente para ver hessian TODO:coloca-lo privado no fim do projecto
 void Rs_Tr_do_it();
