@@ -1,8 +1,10 @@
 # IMEC
 Induction machine simulation and control:
 
-IFOC-complete Indirect field oriented control for induction machine .
+  IFOC-complete Indirect field oriented control for induction machine .
 
-LMA- Loss minimization algorithm. To know the optimal current magnetization, etc
+  LMA- Loss minimization algorithm. To know the optimal current magnetization and maximum binary to apply
 
-Rotor Time Constant estimator. To adjust the constant with temperature
+  Rotor Time Constant estimator. To adjust the constant with temperature
+
+  SVPWM
