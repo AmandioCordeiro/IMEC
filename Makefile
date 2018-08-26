@@ -4,17 +4,17 @@ CFLAGS= -g  --std=c++11
 
 default: Ind_motor_sim
 
-Ind_motor_sim: ClarkeParkTransforms.o Rot_Flux_Ang.o tpid_class.o filter_rtc.o Ifoc_2_sem_gui.o
-	$(CC) $(CFLAGS) -o Ind_motor_sim ClarkeParkTransforms.o Rot_Flux_Ang.o tpid_class.o filter_rtc.o Ifoc_2_sem_gui.o 
+Ind_motor_sim: ClarkeParkTransforms.o Rot_Flux_Ang.o tpid_class.o Ifoc_2_sem_gui.o
+	$(CC) $(CFLAGS) -o Ind_motor_sim ClarkeParkTransforms.o Rot_Flux_Ang.o tpid_class.o Ifoc_2_sem_gui.o 
 	
-Ifoc_2_sem_gui.o:	Ifoc_2_sem_gui.cpp ClarkeParkTransforms.cpp Rot_Flux_Ang.hpp tpid_class.h control_motor.hpp filter_rtc.hpp
+Ifoc_2_sem_gui.o:	Ifoc_2_sem_gui.cpp ClarkeParkTransforms.cpp Rot_Flux_Ang.hpp tpid_class.h control_motor.hpp 
 	 $(CC) $(CFLAGS) -c Ifoc_2_sem_gui.cpp  
 
 control_motor.o:	control_motor.cpp control_motor.hpp ClarkeParkTransforms.cpp  Rot_Flux_Ang.cpp Rot_Flux_Ang.hpp  tpid_class.cpp tpid_class.h
 	$(CC) $(CFLAGS) -c control_motor.cpp 
 
-filter_rtc.o:	filter_rtc.cpp filter_rtc.hpp
-	$(CC) $(CFLAGS) -c filter_rtc.cpp
+#filter_rtc.o:	filter_rtc.cpp filter_rtc.hpp
+#	$(CC) $(CFLAGS) -c filter_rtc.cpp
 
 ClarkeParkTransforms.o:	ClarkeParkTransforms.cpp
 	$(CC) $(CFLAGS) -c ClarkeParkTransforms.cpp
