@@ -36,7 +36,7 @@
 #include <unistd.h>
 #include "Rot_Flux_Ang.hpp"
 #include "control_motor.cpp"
-#include "filter_rtc.hpp"
+//#include "filter_rtc.hpp"
 #include <string>
 #include <fstream>
 #include <complex> 
@@ -249,7 +249,7 @@ int main(int argc, char **argv)
 	//double vec_MediaTr_calc_gl[6];
 	//for (int i=0;i<6;i++)vec_MediaTr_calc_gl[i]=Tr_calc_gl;
 	
-	filter filtro;
+	//filter filtro;
 	
 	long c=0;
 	
