@@ -64,7 +64,7 @@ double Lrro=(ro*Lr);//0.0021891
 #define R 0.34 //whell radius
 #define MASSA (3500)//massa veiculo
 #define T_G_R (4.313*4.1/*1.9*/) //total gear racio. (gear_box*final_gear*"reduction_low_ratio")
-double gradiente=0.15;
+double gradiente=-0.25;//0.15;
 #define G 9.81
 #define C_D 0.5
 #define RO_AIR 1.25
@@ -217,8 +217,9 @@ double motor::torque(double vas,double vbs,double vcs){
 		return torque_g(ClarkePark(RotorFluxAngle/*np*theta_r*/,tThreePhase(vas,vbs,vcs)).d/*alpha*/,ClarkePark(RotorFluxAngle/*np*theta_r*/,tThreePhase(vas,vbs,vcs)).q/*beta*/,angle.get_wm());
 };
 double motor::get_wr(double va,double vb,double vc/*double torq_g,double torq_L*/){
-		double a=atan(gradiente);
-		wr=wr+((torque(va,vb,vc)/*-torq_L*/-(C_D*1/2*RO_AIR*A_F*wr/T_G_R*R*wr/T_G_R*R+C_R*MASSA*G*cos(a)+MASSA*G*sin(a))*R/T_G_R)*T/(J+R*R*MASSA/(T_G_R*T_G_R)));
+		//double a=atan(gradiente);
+		//torq_L=(C_D*1/2*RO_AIR*A_F*wr/T_G_R*R*wr/T_G_R*R+C_R*MASSA*G*cos(a)+MASSA*G*sin(a))*R/T_G_R;
+		wr=wr+(torque(va,vb,vc)-torq_L)*T/(J+R*R*MASSA/(T_G_R*T_G_R));
 		return wr;
 	};
 	

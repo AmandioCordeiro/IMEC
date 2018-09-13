@@ -275,8 +275,8 @@ while (quit==false){
 	////tcflush(0, TCIFLUSH);cin>>imrreff;enable_raw_mode();/*fflush(stdin);*/break;
 				case 's' :cout<<"enter speed:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
 	tcflush(0, TCIFLUSH);cin>>w_ref;enable_raw_mode();/*fflush(stdin);*/break;
-		//		case 'l' :cout<<"enter torque load:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
-	//tcflush(0, TCIFLUSH);cin>>load;enable_raw_mode();/*fflush(stdin);*/break; 
+				case 'l' :cout<<"enter torque load:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
+	tcflush(0, TCIFLUSH);cin>>load;enable_raw_mode();/*fflush(stdin);*/break; 
 				case 'a' :cout<<"enter prop. gain speed:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
 	tcflush(0, TCIFLUSH);cin>>vel_p;enable_raw_mode();/*fflush(stdin);*/break;
 				case 'b' :cout<<"enter int. gain speed:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
@@ -290,14 +290,14 @@ while (quit==false){
 				case '-' :w_ref--;/*flag=false;*/break;
 				//case 'k' :load--;/*flag=false;*/break;
 				//case 'p' :load++;/*flag=false;*/break;
-				//case 't' :cout<<"set by torque load ";p=false;break;
-				//case 'e' :cout<<"set by power load ";p=true;break;
-				case 'h' :cout<<"enter power load:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
-	tcflush(0, TCIFLUSH);cin>>pl;enable_raw_mode();/*fflush(stdin);*/break;
+				case 't' :cout<<"set by torque load ";p=false;break;
+				case 'v' :cout<<"set by vehicle load ";p=true;break;
+				//case 'h' :cout<<"enter power load:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
+	//tcflush(0, TCIFLUSH);cin>>pl;enable_raw_mode();/*fflush(stdin);*/break;
 				case 'j' :pl--;/*flag=false;*/break;
 				case 'i' :pl++;/*flag=false;*/break;
 	
-				default:cout<<"invalid operator, s(commanded speed)"<<" a (enter prop. gain speed)"<<" b (enter int. gain speed)"<<"c (enter prop. gain torq_controll)"<<"d (enter int. gain torq_controll)"<</*,l(load)*/", +(increment speed), - (decrement speed)"<</*, k(decrement load),p(increment load),*/", r(run), q(quit)"<<endl;	
+				default:cout<<"invalid operator, s(commanded speed)"<<" a (enter prop. gain speed)"<<" b (enter int. gain speed)"<<"c (enter prop. gain torq_controll)"<<"d (enter int. gain torq_controll)"<<" l(load), t(set by torque load), v(set by vehicle load), +(increment speed), -(decrement speed)"<</*, k(decrement load),p(increment load),*/", r(run), q(quit)"<<endl;	
 			}
 		
 		}
@@ -306,12 +306,14 @@ while (quit==false){
 			//DEfinition of torque load in function of power specified
 		//TODO remove following at end
 			if (p && control.get_wr()!=0) {
-			  load=pl/abs(control.get_wr());
-			  if (load<LOAD_MIN)load=LOAD_MIN;
-			  if (load>LOAD_MAX) load=LOAD_MAX;}
-			else if (p){
-					if (load<0)load=LOAD_MIN;
-					if (load>0) load=LOAD_MAX;
+				double a=atan(gradiente);
+				load=(C_D*1/2*RO_AIR*A_F*/*wr*/velocidade/T_G_R*R*/*wr*/velocidade/T_G_R*R+C_R*MASSA*G*cos(a)+MASSA*G*sin(a))*R/T_G_R;//torque resistant vehicle
+			//  load=pl/abs(control.get_wr());
+			 // if (load<LOAD_MIN)load=LOAD_MIN;
+			 // if (load>LOAD_MAX) load=LOAD_MAX;}
+			//else if (p){
+				//	if (load<0)load=LOAD_MIN;
+				//	if (load>0) load=LOAD_MAX;
 					}
 			if (control.get_n()*T<0.135)load=LOAD_1_sec*0.9;
 		//TODO remove above at end

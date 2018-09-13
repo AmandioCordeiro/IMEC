@@ -66,6 +66,7 @@ extern double T;
 #define LOAD_1_sec 13
 extern double IDC,IDC2_3;
 extern double vaa,vbb,vcc;
+
 /*#define*/extern double vel_p;//experimentado com 6//1000//1//9//1.1//(3)//6.0*0.9//(2/*4.5*/)//TODO// 13marco
 /*#define*/extern double vel_i;//     ''       ''  0.0006// (0.00006)//(0.00006)//0
 #define vel_d 0//?
