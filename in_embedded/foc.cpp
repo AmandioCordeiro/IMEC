@@ -193,6 +193,7 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 			float Wc = Vmax/(Imax*Ls)*sqrt((ro*ro+1.0)/(2.0*ro*ro));//TODO acrescentar 0.9??
 			if(Wm < Wn) 
 				{
+				//max torque limit region:
 				if (n*T<0.135) Tm1=LOAD_1_sec;else Tm1=TM1;//TODO remove T in the final and calc, in real maybe this is limited by batteries//TODO maybe limite set speed 
 					 vel.act_min_max(-Tm1,Tm1);
 					 vel.calc_pid();		
@@ -203,7 +204,8 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 				else{IDQ_d_lma=Idn;
 					}
 				}
-			else {if (Wm < Wc ){					
+			else {if (Wm < Wc ){
+					//max current(power) limit region:
 					float Tm2=Kt*sqrt(pow(Vmax/(Wm*Ls),2.0)-Imax*Imax*ro*ro)*sqrt(Imax*Imax-pow(Vmax/(Wm*Ls),2.0))/(1.0-ro*ro);
 					vel.act_min_max(-Tm2,Tm2);
 					vel.calc_pid();		
@@ -215,6 +217,7 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 						}
 					}
 				else {
+					//max Power-speed(voltage) limit region:
 					float Tm3=Kt*(pow((Vmax/(Wm*Ls)),2.0)/(2.0*ro));
 					vel.act_min_max(-Tm3,Tm3);
 					vel.calc_pid();		
