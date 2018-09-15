@@ -7,4 +7,4 @@ Induction machine simulation and control:
 
   Rotor Time Constant estimator. To adjust the constant with temperature
 
-  SVPWM
+  SVPWM - Space Vector Pulse Width Modulation
