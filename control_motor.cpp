@@ -212,7 +212,7 @@ double motor::torque_g(double Vds,double Vqs,double angle_get_wm){//torque gener
 	if (/*(t*wr)<0 &&*/ (IDC/*VDC*/)<0) sum_power_in += abs(t*wr); else sum_power_in += (IDC*VDC);
 	sum_power_trac += t*wr;
 	sum_power_battery += IDC*VDC;fTorque<<"sum_power_battery: "<<sum_power_battery<<endl;
-	fTorque<<n*T<<" sec. Torque_gerado, previous:"<<t/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl<<"power (Torq*wr), previous: "<<(t/*np*/*wr)<<" power (Vdc*Idc), previous: "<<(IDC*VDC)<<endl;if (IDC<0) fTorque<<"previous,effici.(instant. generat.):"<<(IDC*VDC)/(t/*np*/*wr);else fTorque<<"previous, effici.(instant. motor):"<<(t/*np*/*wr)/(IDC*VDC)<<" machine medium efficiency: "<<sum_power_out/sum_power_in<<" ef: "<<sum_power_trac/sum_power_battery<<endl<<"We- sincronous speed in ang. electric: "<<angle_get_wm<<endl<<"(angle_get_wm-wr*np)- slip speed: "<<(angle_get_wm-wr*np)<<endl;//<<"torq_l:"<<torq_L<<endl;	
+	fTorque<<n*T<<" sec. Torque_gerado, previous:"<<t/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl<<"power (Torq*wr), previous: "<<(t/*np*/*wr)<<" power (Vdc*Idc), previous: "<<(IDC*VDC)<<endl;if (IDC<0) fTorque<<"previous,effici.(instant. generat.):"<<(IDC*VDC)/(t/*np*/*wr);else fTorque<<"previous, effici.(instant. motor):"<<(t/*np*/*wr)/(IDC*VDC)<<" machine medium efficiency: "<<sum_power_out/sum_power_in<<" ef: "<<sum_power_trac/sum_power_battery<<endl<<"We- sincronous speed in ang. electric: "<<angle_get_wm<<endl<<"(angle_get_wm-wr*np)- slip angle: "<<(angle_get_wm-wr*np)<<endl;//<<"torq_l:"<<torq_L<<endl;	
 	t=(3.0/2.0*M*np/Lr/roLs*(fdr*(fqs)-fqr*(fds)));
 	return t;
 };
