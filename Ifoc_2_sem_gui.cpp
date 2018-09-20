@@ -24,6 +24,7 @@
 
 //#include <iostream>
 #include <stdio.h>
+#include <stdlib.h>
 #include <iostream>
 #include <math.h>
 #include <tgmath.h>
@@ -38,6 +39,7 @@
 #include "control_motor.cpp"
 //#include "filter_rtc.hpp"
 #include <string>
+#include <string.h>
 #include <fstream>
 #include <complex> 
 
@@ -57,7 +59,7 @@ extern double torq_g;
 tThreePhase v(0.0,0.0,0.0);
 bool quit=false;
 float w_ref=0.0;
-float load=0.0;
+float load=0.0, load_s=0.0;
 float pl=0.0;
 bool p=true;
 float imrreff=0.0;
@@ -258,7 +260,11 @@ int main(int argc, char **argv)
 	//double v_med_Tr_calc[16]={0.0};
 	//double v_med_T[16]={0.0};
 		
-	
+	ifstream driving_cycle("ececol.txt");
+	string line;
+	int i=0;
+	bool primeiro=true;
+	bool e=true;
 	enable_raw_mode();
 	
 while (quit==false){
@@ -273,10 +279,10 @@ while (quit==false){
 				case 'q' :quit=true;/*flag=false*/;break;
 				////case 'm' :cout<<"enter magnetizing current reference:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
 	////tcflush(0, TCIFLUSH);cin>>imrreff;enable_raw_mode();/*fflush(stdin);*/break;
-				case 's' :cout<<"enter speed:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
+				case 's' :cout<<"enter speed:";e=false;/*e-> to set by driving cycle or by speed*//*if(flag==true){flag=false;break;};*/disable_raw_mode();
 	tcflush(0, TCIFLUSH);cin>>w_ref;enable_raw_mode();/*fflush(stdin);*/break;
 				case 'l' :cout<<"enter torque load:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
-	tcflush(0, TCIFLUSH);cin>>load;enable_raw_mode();/*fflush(stdin);*/break; 
+	tcflush(0, TCIFLUSH);cin>>load_s;enable_raw_mode();p=false;/*fflush(stdin);*/break; 
 				case 'a' :cout<<"enter prop. gain speed:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
 	tcflush(0, TCIFLUSH);cin>>vel_p;enable_raw_mode();/*fflush(stdin);*/break;
 				case 'b' :cout<<"enter int. gain speed:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
@@ -285,19 +291,21 @@ while (quit==false){
 	tcflush(0, TCIFLUSH);cin>>torque_control_p;enable_raw_mode();/*fflush(stdin);*/break;
 				case 'd' :cout<<"enter int. gain torq_controll:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
 	tcflush(0, TCIFLUSH);cin>>torque_control_i;enable_raw_mode();/*fflush(stdin);*/break;
-				
+				case ' ' :cout<<"pause, press r to return";run=false;break;//disable_raw_mode();
+	//tcflush(0, TCIFLUSH);char f='p';while(f != ' '){cin>>f;cout<<f;};enable_raw_mode();/*fflush(stdin);*/break;
 				case '+' :w_ref++;/*flag=false;*/break;
 				case '-' :w_ref--;/*flag=false;*/break;
 				//case 'k' :load--;/*flag=false;*/break;
 				//case 'p' :load++;/*flag=false;*/break;
-				case 't' :cout<<"set by torque load ";p=false;break;
-				case 'v' :cout<<"set by vehicle load ";p=true;break;
+				//case 't' :cout<<"set by torque load ";p=false;break;
+				case 'v' :cout<<"set by vehicle load ";p=true;break;//inicial p=true
 				//case 'h' :cout<<"enter power load:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
 	//tcflush(0, TCIFLUSH);cin>>pl;enable_raw_mode();/*fflush(stdin);*/break;
 				case 'j' :pl--;/*flag=false;*/break;
 				case 'i' :pl++;/*flag=false;*/break;
-	
-				default:cout<<"invalid operator, s(commanded speed)"<<" a (enter prop. gain speed)"<<" b (enter int. gain speed)"<<"c (enter prop. gain torq_controll)"<<"d (enter int. gain torq_controll)"<<" l(load), t(set by torque load), v(set by vehicle load), +(increment speed), -(decrement speed)"<</*, k(decrement load),p(increment load),*/", r(run), q(quit)"<<endl;	
+				//case 'e' : e=true;break;//set by driving_cycle
+				
+				default:cout<<"invalid operator, \ns(commanded speed)"<<" \na (enter prop. gain speed)"<<" \nb (enter int. gain speed)"<<"\nc (enter prop. gain torq_controll)"<<"\nd (enter int. gain torq_controll)"<<" \nl(load), "<</*\nt(set by torque load), */"\nv(set by vehicle load), \n+(increment speed), \n-(decrement speed)"<</*, k(decrement load),p(increment load),*/", \nr(run), \nq(quit)"<<endl;	
 			}
 		
 		}
@@ -305,9 +313,10 @@ while (quit==false){
 		else if (run==true){
 			//DEfinition of torque load in function of power specified
 		//TODO remove following at end
-			if (p && control.get_wr()!=0) {
-				double a=atan(gradiente);
-				load=(C_D*1/2*RO_AIR*A_F*/*wr*/velocidade/T_G_R*R*/*wr*/velocidade/T_G_R*R+C_R*MASSA*G*cos(a)+MASSA*G*sin(a))*R/T_G_R;//torque resistant vehicle
+			if (control.get_n()*T<0.135)load=LOAD_1_sec*0.9;
+			else if (p && control.get_wr()!=0) {
+				double a=atan(gradiente);	double load_C_R;if (velocidade>0)load_C_R=C_R*MASSA*G*cos(a);else if(velocidade<0)load_C_R = -C_R*MASSA*G*cos(a);else if (velocidade==0)load_C_R=0;
+				load=(C_D*1/2*RO_AIR*A_F*/*wr*/velocidade/T_G_R*R*/*wr*/velocidade/T_G_R*R+load_C_R+MASSA*G*sin(a))*R/T_G_R;//torque resistant vehicle
 			//  load=pl/abs(control.get_wr());
 			 // if (load<LOAD_MIN)load=LOAD_MIN;
 			 // if (load>LOAD_MAX) load=LOAD_MAX;}
@@ -315,7 +324,7 @@ while (quit==false){
 				//	if (load<0)load=LOAD_MIN;
 				//	if (load>0) load=LOAD_MAX;
 					}
-			if (control.get_n()*T<0.135)load=LOAD_1_sec*0.9;
+			else load=load_s;
 		//TODO remove above at end
 			control.vel_tune_pid();//TODO remove at END, in embedded
 			control.torque_control_tune_pid();
@@ -325,7 +334,51 @@ while (quit==false){
 			fload<<control.get_n()*T<<"sec. Torque load(ref.): "<<control.get_torq_L()<<endl;
 			//fim_ciclo=false;
 			
+			if (i<4 && e==true && driving_cycle.is_open())
+			{				
+						if (primeiro){getline(driving_cycle,line);primeiro=false;}
+						fVel<<"  line   "<<line<<endl;
+						while(line.length() > 13 )getline(driving_cycle,line);	
+						
+						// char szOrbits[] = "365.24 29.53";
+						
+						/*vector<char> toVector( const std::string& s ) {
+							string s = "apple";  
+							vector<char> v(s.size()+1);
+							memcpy( &v.front(), s.c_str(), s.size() + 1 );
+							return v;
+						}
+						vector<char> v = toVector(std::string("apple"));
+*/
+						//// what you were looking for (mutable)
+						//char* c = v.data();
+						vector<char> v(line.size()+1);
+						memcpy( &v.front(), line.c_str(), line.size() + 1 );
+						
+						char* s_line=v.data();
+						char* pEnd;
+						//double d1, d2;
+						double b, end;
+						/*d1*/b = strtod (s_line/*szOrbits*/, &pEnd);
+						/*d2*/end = strtod (pEnd, NULL);
+						fVel<<" (b+196*i): "<<(b+196*i)/*<<" b e end :"<<b<<end*/<<endl;
+						
+						if (b==195 && (control.get_n()*T) == (b+196*i)){
+							driving_cycle.close();
+							driving_cycle.open("ececol.txt",std::ifstream::in);
+							i++;
+							primeiro =true;
+							w_ref=end*1000/3600*T_G_R/R;
+							}
+						else if ((control.get_n()*T) == (b+196*i)) 	
+						{	w_ref=end*1000/3600*T_G_R/R;
+							getline(driving_cycle,line);
+						
+						}
+			}
+			else driving_cycle.close();	
 			control.set_w_ref(w_ref);
+			
 			//control.set_imrref(imrreff);//TODO remove this, LMA!...
 			control.set_torq_L(load);//TODO this is only in simulation, not needed in real
 			control.set_Theta_r();
@@ -442,6 +495,9 @@ while (quit==false){
 			
 			cout<<" vaa:"<<vaa<<" vbb:"<<vbb<<" vcc:"<<vcc<<endl;
 			T1T2<<" vaa_n:"<<vaa<<" vbb_n:"<<vbb<<" vcc_n:"<<vcc<<endl<<"IDC_p: "<<IDC<<endl;
+			
+			//menos efficiente com isto!?
+			//if (w_ref==0 && abs(velocidade) < 1)/*T0==T*/{T0=T;vaa=0.0;vbb=0.0;vcc=0.0;}
 			
 			control.get_wr(vaa,vbb,vcc); velocidade=control.get_wr(); distance_+=velocidade/T_G_R*R*T; fVel<<control.get_n()*T<<"sec. actual velocity, shaft (rad/s): "<<velocidade<<" km/h: "<<velocidade*R/T_G_R*3.6<<"distance: "<<distance_<<" meters"<<endl;
 //_____________

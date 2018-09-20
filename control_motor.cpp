@@ -63,14 +63,18 @@ double Lsro=(ro*Ls);//0.00081261
 double Lrro=(ro*Lr);//0.0021891
 #define R 0.34 //whell radius
 #define MASSA (3500)//massa veiculo
-#define T_G_R (4.313*4.1/*1.9*/) //total gear racio. (gear_box*final_gear*"reduction_low_ratio")
-double gradiente=-0.25;//0.15;
+#define T_G_R (/*4.313*/2.33/*1.436 1 0.789*/*4.1/*1.9*/) //total gear racio. (gear_box*final_gear*"reduction_low_ratio")
+double gradiente=0;//-0.25;//0.15;
 #define G 9.81
 #define C_D 0.5
 #define RO_AIR 1.25
 #define C_R 0.01
 #define A_F 2
-
+double sum_power_out=0.001;
+double sum_power_in=0.000001;
+double Torq_net=0.0;
+double sum_power_trac =0.0;
+double sum_power_battery = 0.0;
 using namespace std;
 using namespace Maths;
 
@@ -199,7 +203,16 @@ double motor::torque_g(double Vds,double Vqs,double angle_get_wm){//torque gener
 //		/*cout<<"ids"<<ids<<endl<<"iqs"<<iqs<<endl;*/fTorque<<n*T<<" sec. Torque_gerado:"<<torq_g/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl;//<<"torq_l:"<<torq_L<<endl;	
 	
 	cout<<"torq: "<<t<<endl<<"fqr: "<<fqr<<endl;
-	fTorque<<n*T<<" sec. Torque_gerado, previous:"<<t/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl<<"power (Torq*wr), previous: "<<(t/*np*/*wr)<<" power (Vdc*Idc), previous: "<<(IDC*VDC)<<endl<<"previous, efficiency: "<<(t/*np*/*wr)/(IDC*VDC)<<endl<<"We- sincronous speed in ang. electric: "<<angle_get_wm<<endl<<"(angle_get_wm-wr*np)- slip speed: "<<(angle_get_wm-wr*np)<<endl;//<<"torq_l:"<<torq_L<<endl;	
+	//double eff_act=(t/*np*/*wr)/(IDC*VDC);
+	//if (!std::isnan(eff_act))eff_act=(t/*np*/*wr)/(IDC*VDC);else eff_act=0.0001;
+	//eff_act/=(IDC*VDC)
+	//efficiency=(efficiency*(n-1)+eff_act)/n;
+	
+	if (/*(t*wr)<0 &&*/ (IDC/*VDC*/)<0) sum_power_out += abs(IDC*VDC) ; else sum_power_out += (t*wr);
+	if (/*(t*wr)<0 &&*/ (IDC/*VDC*/)<0) sum_power_in += abs(t*wr); else sum_power_in += (IDC*VDC);
+	sum_power_trac += t*wr;
+	sum_power_battery += IDC*VDC;fTorque<<"sum_power_battery: "<<sum_power_battery<<endl;
+	fTorque<<n*T<<" sec. Torque_gerado, previous:"<<t/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl<<"power (Torq*wr), previous: "<<(t/*np*/*wr)<<" power (Vdc*Idc), previous: "<<(IDC*VDC)<<endl<<"previous, efficiency(instantaneous): "<<(t/*np*/*wr)/(IDC*VDC)<<"machine medium efficiency: "<<sum_power_out/sum_power_in<<" ef: "<<sum_power_trac/sum_power_battery<<endl<<"We- sincronous speed in ang. electric: "<<angle_get_wm<<endl<<"(angle_get_wm-wr*np)- slip speed: "<<(angle_get_wm-wr*np)<<endl;//<<"torq_l:"<<torq_L<<endl;	
 	t=(3.0/2.0*M*np/Lr/roLs*(fdr*(fqs)-fqr*(fds)));
 	return t;
 };
@@ -219,7 +232,8 @@ double motor::torque(double vas,double vbs,double vcs){
 double motor::get_wr(double va,double vb,double vc/*double torq_g,double torq_L*/){
 		//double a=atan(gradiente);
 		//torq_L=(C_D*1/2*RO_AIR*A_F*wr/T_G_R*R*wr/T_G_R*R+C_R*MASSA*G*cos(a)+MASSA*G*sin(a))*R/T_G_R;
-		wr=wr+(torque(va,vb,vc)-torq_L)*T/(J+R*R*MASSA/(T_G_R*T_G_R));
+		Torq_net=torque(va,vb,vc)-torq_L;
+		wr=wr+(Torq_net)*T/(J+R*R*MASSA/(T_G_R*T_G_R));
 		return wr;
 	};
 	
@@ -387,6 +401,7 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 			
 			if(Wm < Wn) 
 				{
+				//max torque limit region:
 				if (n*T<0.135) Tm1=LOAD_1_sec;else Tm1=TM1;//TODO remove T in the final and calc, in real maybe this is limited by batteries//TODO maybe limite set speed 
 				
 						//if(n*T<10)Tm1=200;else Tm1=TM1; //TODO remove at end or adapt
@@ -403,7 +418,9 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 				if (isnanf(IDQ_d_lma)){IDQ_d__lma<<"is not a number IDQ_d_lam 1"<<endl;}
 				if ((IDQ_d_lma<Idmin) || isnanf(IDQ_d_lma))IDQ_d_lma=Idmin;
 				}
-			else {if (Wm < Wc ){					
+			else {
+				//max current(power) limit region:
+				if (Wm < Wc ){					
 					float Tm2=Kt*sqrt(pow(Vmax/(Wm*Ls),2.0)-Imax*Imax*ro*ro)*sqrt(Imax*Imax-pow(Vmax/(Wm/*r()*np*/*Ls),2.0))/(1.0-ro*ro);
 					vel.act_min_max(-Tm2,Tm2);
 					vel.calc_pid();		
@@ -418,6 +435,7 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 					if ((IDQ_d_lma<Idmin) || isnanf(IDQ_d_lma))IDQ_d_lma=Idmin;
 					}
 				else {
+					//max Power-speed(voltage) limit region:
 					float Tm3=Kt*(pow((Vmax/(Wm/*r()*np*/*Ls)),2.0)/(2.0*ro));
 					vel.act_min_max(-Tm3,Tm3);
 					vel.calc_pid();		
