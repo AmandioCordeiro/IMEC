@@ -334,6 +334,7 @@ while (quit==false){
 			fload<<control.get_n()*T<<"sec. Torque load(ref.): "<<control.get_torq_L()<<endl;
 			//fim_ciclo=false;
 			
+			//four urban drive cycle, ece 15*4
 			if (i<4 && e==true && driving_cycle.is_open())
 			{				
 						if (primeiro){getline(driving_cycle,line);primeiro=false;}
@@ -376,7 +377,47 @@ while (quit==false){
 						
 						}
 			}
-			else driving_cycle.close();	
+			//extra urban drive cycle
+			else {
+				if (primeiro){
+					T_G_R = (/*4.313 2.33*/1.436/* 1 0.789*/*4.1/*1.9*/);
+					driving_cycle.close();
+					driving_cycle.open("eudccol.txt",std::ifstream::in);
+					getline(driving_cycle,line);
+					primeiro=false;
+					}
+				fVel<<"  line   "<<line<<endl;
+				while(line.length() > 13 )getline(driving_cycle,line);	
+				
+				// char szOrbits[] = "365.24 29.53";
+				
+				/*vector<char> toVector( const std::string& s ) {
+					string s = "apple";  
+					vector<char> v(s.size()+1);
+					memcpy( &v.front(), s.c_str(), s.size() + 1 );
+					return v;
+				}
+				vector<char> v = toVector(std::string("apple"));
+*/
+				//// what you were looking for (mutable)
+				//char* c = v.data();
+				vector<char> v(line.size()+1);
+				memcpy( &v.front(), line.c_str(), line.size() + 1 );
+				
+				char* s_line=v.data();
+				char* pEnd;
+				//double d1, d2;
+				double b, end;
+				/*d1*/b = strtod (s_line/*szOrbits*/, &pEnd);
+				/*d2*/end = strtod (pEnd, NULL);
+				if ((control.get_n()*T) == (b+196*4)) 	
+				{	w_ref=end*1000/3600*T_G_R/R;
+					getline(driving_cycle,line);
+				
+				}
+				if (b==400)quit=true;
+				}	
+				
 			control.set_w_ref(w_ref);
 			
 			//control.set_imrref(imrreff);//TODO remove this, LMA!...

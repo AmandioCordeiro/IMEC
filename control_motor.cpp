@@ -63,7 +63,7 @@ double Lsro=(ro*Ls);//0.00081261
 double Lrro=(ro*Lr);//0.0021891
 #define R 0.34 //whell radius
 #define MASSA (3500)//massa veiculo
-#define T_G_R (/*4.313*/2.33/*1.436 1 0.789*/*4.1/*1.9*/) //total gear racio. (gear_box*final_gear*"reduction_low_ratio")
+/*#define*/double T_G_R = (/*4.313*/2.33/*1.436 1 0.789*/*4.1/*1.9*/); //total gear racio. (gear_box*final_gear*"reduction_low_ratio")
 double gradiente=0;//-0.25;//0.15;
 #define G 9.81
 #define C_D 0.5
