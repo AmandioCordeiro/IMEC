@@ -262,9 +262,9 @@ int main(int argc, char **argv)
 		
 	ifstream driving_cycle("ececol.txt");
 	string line;
-	int i=0;
+	int i=4;//here
 	bool primeiro=true;
-	bool e=true;
+	
 	enable_raw_mode();
 	
 while (quit==false){
@@ -334,6 +334,7 @@ while (quit==false){
 			fload<<control.get_n()*T<<"sec. Torque load(ref.): "<<control.get_torq_L()<<endl;
 			//fim_ciclo=false;
 			
+						
 			//four urban drive cycle, ece 15*4
 			if (i<4 && e==true && driving_cycle.is_open())
 			{				
@@ -376,11 +377,13 @@ while (quit==false){
 							getline(driving_cycle,line);
 						
 						}
+						//if (b==25)quit=true;//test 
 			}
 			//extra urban drive cycle
-			else {
+			else if (e==true)
+				{
 				if (primeiro){
-					T_G_R = (/*4.313 2.33*/1.436/* 1 0.789*/*4.1/*1.9*/);
+					
 					driving_cycle.close();
 					driving_cycle.open("eudccol.txt",std::ifstream::in);
 					getline(driving_cycle,line);
@@ -410,7 +413,7 @@ while (quit==false){
 				double b, end;
 				/*d1*/b = strtod (s_line/*szOrbits*/, &pEnd);
 				/*d2*/end = strtod (pEnd, NULL);
-				if ((control.get_n()*T) == (b+196*4)) 	
+				if ((control.get_n()*T) == b/*(b+196*4)*/) 	//here
 				{	w_ref=end*1000/3600*T_G_R/R;
 					getline(driving_cycle,line);
 				
@@ -540,7 +543,7 @@ while (quit==false){
 			//menos efficiente com isto!?
 			//if (w_ref==0 && abs(velocidade) < 1)/*T0==T*/{T0=T;vaa=0.0;vbb=0.0;vcc=0.0;}
 			
-			control.get_wr(vaa,vbb,vcc); velocidade=control.get_wr(); distance_+=velocidade/T_G_R*R*T; fVel<<control.get_n()*T<<"sec. actual velocity, shaft (rad/s): "<<velocidade<<" km/h: "<<velocidade*R/T_G_R*3.6<<"distance: "<<distance_<<" meters"<<endl;
+			control.get_wr(vaa,vbb,vcc); velocidade=control.get_wr(); distance_+=velocidade/T_G_R*R*T; fVel<<control.get_n()*T<<"sec. actual velocity, shaft (rad/s): "<<velocidade<<"T_G_R"<<T_G_R<<" km/h: "<<velocidade*R/T_G_R*3.6<<"distance: "<<distance_<<" meters"<<endl;
 //_____________
 
 //_____________

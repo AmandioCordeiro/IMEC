@@ -33,7 +33,7 @@ double T = 0.0001;//0.0001-10khz//TODO: PWM periode 0.000125-8khz
 double vel_p=20.0;//20.0;//6;//1000;//1;//1//9//1.1//(3)//6.0*0.9//(2/*4.5*/)//TODO: speed controller gain 
 double vel_i=0.0006;//0.00006;//TODO: speed controller integral gain 
 double torque_control_p=3.6;//TODO: torque controller gain
-double torque_control_i=0.01/*0.008*/;//TODO: torque controller integral gain
+double torque_control_i=0.001/*alterei 0.01 0.008*/;//TODO: torque controller integral gain
 
 double IDC2_3=0.0;
 double IDC=0.0;//TODO: remove at end. to calc medium value of IDC 
@@ -64,6 +64,7 @@ double Lrro=(ro*Lr);//0.0021891
 #define R 0.34 //whell radius
 #define MASSA (3500)//massa veiculo
 /*#define*/double T_G_R = (/*4.313*/2.33/*1.436 1 0.789*/*4.1/*1.9*/); //total gear racio. (gear_box*final_gear*"reduction_low_ratio")
+double T_G_R_ant=T_G_R;	
 double gradiente=0;//-0.25;//0.15;
 #define G 9.81
 #define C_D 0.5
@@ -75,6 +76,8 @@ double sum_power_in=0.000001;
 double Torq_net=0.0;
 double sum_power_trac =0.0;
 double sum_power_battery = 0.0;
+bool e=true;
+
 using namespace std;
 using namespace Maths;
 
@@ -211,8 +214,9 @@ double motor::torque_g(double Vds,double Vqs,double angle_get_wm){//torque gener
 	if (/*(t*wr)<0 &&*/ (IDC/*VDC*/)<0) sum_power_out += abs(IDC*VDC) ; else sum_power_out += (t*wr);
 	if (/*(t*wr)<0 &&*/ (IDC/*VDC*/)<0) sum_power_in += abs(t*wr); else sum_power_in += (IDC*VDC);
 	sum_power_trac += t*wr;
-	sum_power_battery += IDC*VDC;fTorque<<"sum_power_battery: "<<sum_power_battery<<endl;
-	fTorque<<n*T<<" sec. Torque_gerado, previous:"<<t/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl<<"power (Torq*wr), previous: "<<(t/*np*/*wr)<<" power (Vdc*Idc), previous: "<<(IDC*VDC)<<endl;if (IDC<0) fTorque<<"previous,effici.(instant. generat.):"<<(IDC*VDC)/(t/*np*/*wr);else fTorque<<"previous, effici.(instant. motor):"<<(t/*np*/*wr)/(IDC*VDC)<<" machine medium efficiency: "<<sum_power_out/sum_power_in<<" ef: "<<sum_power_trac/sum_power_battery<<endl<<"We- sincronous speed in ang. electric: "<<angle_get_wm<<endl<<"(angle_get_wm-wr*np)- slip angle: "<<(angle_get_wm-wr*np)<<endl;//<<"torq_l:"<<torq_L<<endl;	
+	sum_power_battery += IDC*VDC/10000/3600;fTorque<<"battery energy : "<<sum_power_battery<<" wh"<<endl;
+	if (n*T==195)fTorque<<"efficiency fim ciclo "<<sum_power_out/sum_power_in<<endl;
+	fTorque<<n*T<<" sec. Torque_gerado, previous:"<<t/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl<<"power (Torq*wr), previous: "<<(t/*np*/*wr)<<" power (Vdc*Idc), previous: "<<(IDC*VDC)<<endl;if (IDC<0) fTorque<<"previous,effici.(instant. generat.):"<<(IDC*VDC)/(t/*np*/*wr);else fTorque<<"previous, effici.(instant. motor):"<<(t/*np*/*wr)/(IDC*VDC);fTorque<<" machine medium efficiency: "<<sum_power_out/sum_power_in/*<<" ef: "<<sum_power_trac/sum_power_battery*/<<endl<<"We- sincronous speed in ang. electric: "<<angle_get_wm<<endl<<"(angle_get_wm-wr*np) \"slip angle:\" "<<(angle_get_wm-wr*np)<<endl;//<<"torq_l:"<<torq_L<<endl;	
 	t=(3.0/2.0*M*np/Lr/roLs*(fdr*(fqs)-fqr*(fds)));
 	return t;
 };
@@ -232,6 +236,21 @@ double motor::torque(double vas,double vbs,double vcs){
 double motor::get_wr(double va,double vb,double vc/*double torq_g,double torq_L*/){
 		//double a=atan(gradiente);
 		//torq_L=(C_D*1/2*RO_AIR*A_F*wr/T_G_R*R*wr/T_G_R*R+C_R*MASSA*G*cos(a)+MASSA*G*sin(a))*R/T_G_R;
+		if (e==true && velocidade*R/T_G_R*3.6 < 26)
+			{T_G_R = (4.313 /*2.33 1.436 1 0.789*/*4.1/*1.9*/);
+			if (T_G_R_ant!=T_G_R)wr = wr *T_G_R/T_G_R_ant;
+			T_G_R_ant=T_G_R;
+			}
+		if (e==true && velocidade*R/T_G_R*3.6 > 30 && velocidade*R/T_G_R*3.6 < 66 )
+			{T_G_R = (/*4.313*/ 2.33/*1.436 1 0.789*/*4.1/*1.9*/);
+			if (T_G_R_ant!=T_G_R)wr = wr *T_G_R/T_G_R_ant;
+			T_G_R_ant=T_G_R;
+			}
+		if (e==true && velocidade*R/T_G_R*3.6 > 70 )
+			{T_G_R = (/*4.313 2.33*/1.436/* 1 0.789*/*4.1/*1.9*/);
+			if (T_G_R_ant!=T_G_R)wr = wr *T_G_R/T_G_R_ant;
+			T_G_R_ant=T_G_R;
+			}
 		Torq_net=torque(va,vb,vc)-torq_L;
 		wr=wr+(Torq_net)*T/(J+R*R*MASSA/(T_G_R*T_G_R));
 		return wr;
@@ -484,7 +503,7 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 //--------------Rotor Time Constant value adjust:			
 						
 			
-			fIDQ<<" VDQ_rfa.d: "<<VDQ_rfa.d<<endl<<" IDQd: "<<IDQd<<" IDQq: "<<IDQq<<endl<<"(IDQd^2+IDQq^2)^(1/2): "<<sqrt(IDQd*IDQd+IDQq*IDQq)/*IDQd+IDQq*/<<"IDC:"<<IDC<<"IDC2_3:"<<IDC2_3<<endl;
+			fIDQ<<n*T<<" sec."<<" VDQ_rfa.d: "<<VDQ_rfa.d<<endl<<" IDQd: "<<IDQd<<" IDQq: "<<IDQq<<endl/*<<"(IDQd^2+IDQq^2)^(1/2): "<<sqrt(IDQd*IDQd+IDQq*IDQq)*//*IDQd+IDQq*/<<"IDC:"<<IDC/*<<"IDC2_3:"<<IDC2_3*/<<endl;
 						
 			
 			cout<<"VDQ.q:"<<VDQ.q<<endl;;fIDQ<<"VDQ.d:"<<VDQ.d<<endl<<"VDQ.q:"<<VDQ.q<<endl;

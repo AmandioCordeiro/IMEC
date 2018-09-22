@@ -80,7 +80,7 @@ extern double iaa_p,vaa_p,cos_phi,two_phi,desc_p;
 #define torque_control_d 0.0//?
 #define torque_control_Min_pid_res (-200/*VDC/sqrt(3)*/)//? max current or voltage???
 #define torque_control_Max_pid_res 200/*VDC/sqrt(3)*0.95*/
-#define torque_control_cel 400.0//(300)//?3000
+#define torque_control_cel 4.0//alterei 400(300)//?3000
 
 #define current_control_y_p 3//TODO//0.7//10//?//TODO!!!- i tried implement this controller without sucess 
 #define current_control_y_i 0.5//(0.00625)//0.0625//?
@@ -90,12 +90,12 @@ extern double iaa_p,vaa_p,cos_phi,two_phi,desc_p;
 #define current_control_y_cel	300.0// 3000//?
 
 
-#define current_control_x_p /*0.000001*/1.9//1.9//0.1//1.92//1.9//2//(0.4)//1//11.0//(6.23*1.11)//0.4//1//0.3//100//5.0//110//5//10//20.0//10//(7)//0.7//10//? 13marco
-#define current_control_x_i /*0.2*/0.001//0.0007//0.00001//(0.0006*0.2)//(0.098)//4.5//0.006//7.0//(0.00006)//0.000625//?
+#define current_control_x_p /*0.000001*/1.99//1.9alterei//0.1//1.92//1.9//2//(0.4)//1//11.0//(6.23*1.11)//0.4//1//0.3//100//5.0//110//5//10//20.0//10//(7)//0.7//10//? 13marco
+#define current_control_x_i /*0.2*/0.002//0.001alterei//0.00001//(0.0006*0.2)//(0.098)//4.5//0.006//7.0//(0.00006)//0.000625//?
 #define current_control_x_d 0.0//?
 //float current_control_x_Min_pid_res = -2/3*VDC;// (-400)//100?
 //float current_control_x_Max_pid_res = 2/3*VDC;//400//100?
-#define current_control_x_cel	0.04//0.002//.001//?3000
+#define current_control_x_cel	0.08//0.04alterei isto//0.002//.001//?3000
 
 ofstream fTorque ("torque.txt");
 ofstream fVel ("speed.txt");
