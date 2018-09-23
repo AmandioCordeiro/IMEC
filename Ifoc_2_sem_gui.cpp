@@ -52,24 +52,21 @@ using namespace Maths;
 #define LOAD_MAX 154
 
 extern ofstream PEI_txt;
-ofstream T1T2 ("T1T2.txt");
+
 
 
 extern double torq_g;
-tThreePhase v(0.0,0.0,0.0);
+
 bool quit=false;
 float w_ref=0.0;
 float load=0.0, load_s=0.0;
 float pl=0.0;
 bool p=true;
 float imrreff=0.0;
-double T0,T1,T2;//2-errado pois T1+T2 estava a dar > k T. 1-T0 indica o tempo por periodo k esta desligado
-int a1,b1,c1,a2,b2,c2;//interruptores da ponte trifásica, 1- first time T1, 2- second time T2
-double pwm_a=0.0,pwm_b=0.0,pwm_c=0.0;//pwm_a- racio time of T that superior leg of a is open, inferior leg complementar
 extern double VDC, Vmax;
 //extern long timer_Tr;
 extern double IDC;
-void svpwm(tTwoPhase v);
+//void svpwm(tTwoPhase v);
 double distance_=0.0;
 
 
@@ -97,147 +94,6 @@ bool kbhit()
 }
 
 
-////////To implement SVPWM:
-void svpwm(tTwoPhase v){//tTwoPhase- bifasico, tendo como referencia o estator
-	
-	double ang=atan2(v.beta,v.alpha);
-
-	cout<<"angulo"<<ang<<endl;
-	T1T2<<"angulo: "<<ang<<endl;
-
-	double ang_u = 0.0;
-	//if (ang>=0&&ang<(PI/6))
-	//	ang_u = ang - PI/6;//gives negative
-	//else if (ang>=PI/6 && ang<(PI/3))
-	//		ang_u = ang - PI/6;//gives positive
-	if (ang>=0&&ang<(PI/3))
-		ang_u = ang - PI/6;//cos positive number == cos negative number
-	
-	else if (ang>=PI/3 && ang<(2*PI/3))
-			ang_u = ang - PI/2 ;
-	//else if (ang>=PI/2 && ang<(2*PI/3))
-		//	ang_u = ang - PI/2;
-	
-	else if (ang>=2*PI/3 && ang<(PI))
-		//	ang_u = 5*PI/6 - ang;
-	//else if (ang>= 5*PI/6 && ang<PI)
-			ang_u = ang - 5*PI/6;
-	
-	
-	else if (ang>=-PI && ang<(-2*PI/3))
-			//ang_u = ang + 5*PI/6;//gives neg
-	//else if (ang>= -5*PI/6 && ang<-2*PI/3)
-			ang_u = ang + 5*PI/6;//gives positive	 	
-	////////////
-	else if (ang>=-2*PI/3 && ang<(-PI/3))
-			//ang_u = 3*PI/2 - ang;
-	//else if (ang>= 3*PI/2 && ang<5*PI/3)
-			ang_u = ang + PI/2;
-		
-	else //if (ang>=5*PI/3 && ang<(11*PI/6))
-			//ang_u = 11*PI/6 - ang;
-	//else /*if (ang>= 11*PI/3 && ang<0)*/
-			ang_u = ang + PI/6;
-					
-	float max_mod_v_ref = VDC/(cos(ang_u)*CONST_SQRT3_);//TODO uncoment in the end cos for max 
-T1T2 << "max_mod_v_ref "<< max_mod_v_ref<<endl;
-//max_mod_v_ref=abs(max_mod_v_ref);//abs para double
-
-	if ( (sqrt(v.beta*v.beta+v.alpha*v.alpha)) > max_mod_v_ref ){
-		v.beta = sin(ang)*max_mod_v_ref;
-		v.alpha = cos(ang)*max_mod_v_ref;
-		/*if (v.alpha > 0 && (v.alpha*v.alpha)>=(max_mod_v_ref*max_mod_v_ref)){
-			v.alpha = max_mod_v_ref;
-			v.beta=0;	}
-		else if ( v.alpha < 0 && (v.alpha*v.alpha) >= (max_mod_v_ref*max_mod_v_ref) ){
-				v.alpha = -max_mod_v_ref;
-				v.beta=0;}			
-		else	
-			v.beta = sqrt(max_mod_v_ref*max_mod_v_ref-v.alpha*v.alpha);
-		*/
-		T1T2<< "v.beta "<<v.beta;
-		T1T2<<"v.alpha"<<v.alpha<<endl;
-	}
-	////VDQ_alpha_esc=v.alpha;//sqrt(v.beta*v.beta+v.alpha*v.alpha)/2/3*VDC/*max_mod_v_ref*/*sin(ang);
-	////VDQ_beta_esc=v.beta;//sqrt(v.beta*v.beta+v.alpha*v.alpha)/2/3*VDC/*max_mod_v_ref*/*cos(ang);
-	
-	if (ang>=0&&ang<(PI/3)){
-			T1=3.0/2.0*T/VDC*(v.alpha-v.beta/CONST_SQRT3_);//T1=abs(v.alpha)/abs(Clarke(tThreePhase(2*VDC/3,-VDC/3,-VDC/3)).alpha)*T;
-			a1=1;b1=0;c1=0;	//ozz 
-			T2=CONST_SQRT3_*T/VDC*v.beta;//T2=3*T/(2*VDC)*(v.alpha-1/CONST_SQRT3_*v.beta);//T2=abs(v.beta)/abs((Clarke(tThreePhase(VDC/3,VDC/3,-2*VDC/3)).beta)*T);
-			a2=1;b2=1;c2=0	;/*v_ooz*/
-			
-			if ((T1+T2)<T) pwm_a=(T1+T2)/T; else pwm_a=1;
-			if ((T1+T2)<T) pwm_b=T2/T; else pwm_b=T2/(T1+T2);
-			pwm_c=0;
-	}
-	else if(ang>=(PI/3)&&ang<(2.0*PI/3)){
-			T1=3.0*T/2.0/VDC*(v.alpha+1/CONST_SQRT3_*v.beta);//T1=abs(v.alpha)/abs(Clarke(tThreePhase(VDC/3,VDC/3,-2*VDC/3)).alpha)*T;
-			a1=1;b1=1;c1=0;//ooz 
-			T2=3.0*T/VDC/2.0*(v.beta/CONST_SQRT3_-v.alpha);
-			a2=0;b2=1;c2=0;/*v_zoz*/
-			
-			if ((T1+T2)<T) pwm_a=T1/T; else pwm_a=T1/(T1+T2);
-			if ((T1+T2)<T) pwm_b=(T1+T2)/T; else pwm_b=1;
-			pwm_c=0;
-	}
-	else if(ang>=(2.0*PI/3)&&ang<(PI)){
-			T1=T*CONST_SQRT3_/VDC*v.beta;//T1=abs(v.alpha)/abs(Clarke(tThreePhase(-VDC/3,2*VDC/3,-VDC/3)).alpha)*T;
-			a1=0;b1=1;c1=0;//zoz 
-			T2=CONST_SQRT3_/2.0*T/VDC*(-v.beta-CONST_SQRT3_*v.alpha);//T2=abs(v.beta)/abs(Clarke(tThreePhase(-2*VDC/3,VDC/3,VDC/3)).beta)*T/*v_zoo*/;
-			a2=0;b2=1;c2=1;
-			
-			pwm_a=0;
-			if ((T1+T2)<T) pwm_b=(T1+T2)/T; else pwm_b=1;
-			if ((T1+T2)<T) pwm_c=T2/T; else pwm_c=T2/(T1+T2);
-	}
-	else if(ang>=(-PI)&&ang<(-2.0*PI/3)){
-			T1=3.0*T/2.0/VDC*(-v.alpha+v.beta/CONST_SQRT3_);//T1=abs(v.alpha)/abs(Clarke(tThreePhase(-2*VDC/3,VDC/3,VDC/3)).alpha)*T;
-			a1=0;b1=1;c1=1;//zoo 
-			T2=-CONST_SQRT3_*T/VDC*v.beta;//T2=abs(v.beta)/abs(Clarke(tThreePhase(-VDC/3,-VDC/3,2*VDC/3)).beta)*T/*v_zzo*/;
-			a2=0;b2=0;c2=1;
-			
-			pwm_a=0;
-			if ((T1+T2)<T) pwm_b=T1/T; else pwm_b=T1/(T1+T2);
-			if ((T1+T2)<T) pwm_c=(T1+T2)/T; else pwm_c=1;			
-	}
-	else if(ang>=(-2*PI/3)&&ang<(-PI/3)){
-			T1=CONST_SQRT3_*T/2.0/VDC*(-v.alpha*CONST_SQRT3_-/*2*/v.beta);//T1=abs(v.alpha)/abs(Clarke(tThreePhase(-VDC/3,-VDC/3,2*VDC/3)).alpha)*T;
-			a1=0;b1=0;c1=1;//zzo 
-			T2=CONST_SQRT3_*T/2.0/VDC*(-v.beta+v.alpha*CONST_SQRT3_);//T2=abs(v.beta)/abs(Clarke(tThreePhase(VDC/3,-2*VDC/3,VDC/3)).beta)*T/*v_ozo*/;
-			a2=1;b2=0;c2=1;
-			
-			if ((T1+T2)<T) pwm_a=T2/T; else pwm_a=T2/(T1+T2);
-			pwm_b=0;
-			if ((T1+T2)<T) pwm_c=(T1+T2)/T; else pwm_c=1;
-	}
-	else /*if(ang>=(-PI/3)&&ang<(0))*/{
-			T1=-1.0*T/VDC*CONST_SQRT3_*v.beta;//T1=abs(v.alpha)/abs(Clarke(tThreePhase(VDC/3,-2*VDC/3,VDC/3)).alpha)*T;
-			a1=1;b1=0;c1=1;//ozo 
-			T2=3.0*T/2.0/VDC*(v.beta/CONST_SQRT3_+v.alpha);//T2=abs(v.beta)/abs(Clarke(tThreePhase(2*VDC/3,-VDC/3,-VDC/3)).beta)*T/*v_ozz*/;
-			a2=1;b2=0;c2=0;
-			
-			if ((T1+T2)<T) pwm_a=(T1+T2)/T; else pwm_a=1;
-			pwm_b=0;
-			if ((T1+T2)<T) pwm_c=T1/T; else pwm_c=T1/(T1+T2);		
-	};
-	 	
-			
-	 T0=T-(T1+T2);//T0 time of period that are off 1, 1, 1 or 0, 0, 0
-	//doc.: para cada periodo T: T1 de tempo com os respectivos a1, b1, c1; T2 de tempo com os respectivos a2, b2, c2. O interruptor correspondente há outra parte da "perna" será o complementar;
-	//TIMERS
-	 //a1,T1; a2,T2 	;a0,T0;   a off
-	 //b1,T1; b2,T2 	;b0,T0;   and b off
-	 //c1,T1 ;c2,T2 	;c0,T0;   and c off
-	//OR: PWMs
-	//ofstream T1T2 ("T1T2.txt",ios::app); 
-	cout<<" T1:"<<T1<<" a1:"<<a1<<" b1:"<<b1<<" c1:"<<c1<<"   T2:"<<T2<<" a2:"<<a2<<" b2:"<<b2<<" c2:"<<c2<<"    T0:"<<T0<<endl;
-	cout<<" pwm_a:"<<pwm_a<<" pwm_b:"<<pwm_b<<" pwm_c:"<<pwm_c<<endl;
-	T1T2<<" T1:"<<T1<<" a1:"<<a1<<" b1:"<<b1<<" c1:"<<c1<<"   T2:"<<T2<<" a2:"<<a2<<" b2:"<<b2<<" c2:"<<c2<<"    T0:"<<T0<<endl;
-	T1T2<<" pwm_a:"<<pwm_a<<" pwm_b:"<<pwm_b<<" pwm_c:"<<pwm_c<<endl;
-v_=v;//TODO remove in embedded
-
-};
 
 int main(int argc, char **argv)
 {
@@ -262,7 +118,7 @@ int main(int argc, char **argv)
 		
 	ifstream driving_cycle("ececol.txt");
 	string line;
-	int i=4;//here
+	int i=0;//here
 	bool primeiro=true;
 	
 	enable_raw_mode();
@@ -413,7 +269,7 @@ while (quit==false){
 				double b, end;
 				/*d1*/b = strtod (s_line/*szOrbits*/, &pEnd);
 				/*d2*/end = strtod (pEnd, NULL);
-				if ((control.get_n()*T) == b/*(b+196*4)*/) 	//here
+				if ((control.get_n()*T) == /*b*/(b+196*i)) 	//here
 				{	w_ref=end*1000/3600*T_G_R/R;
 					getline(driving_cycle,line);
 				
@@ -480,7 +336,7 @@ while (quit==false){
 
 			double ia=control.get_ias();//TODO to measure cos phi
 			//função a seguir com tempo variavel, necessario resolver para tempo const
-			svpwm(control.get_V());//news gates and times
+			svpwm(control.get_V(),control.get_rot_fl_an(),control);//news gates and times
 			/*here*/
 			iaa_p=ia;
 			vaa_p=vaa;
@@ -537,7 +393,7 @@ while (quit==false){
 			//vbb=InvClarke(v_).b;
 			//vcc=InvClarke(v_).c;
 			
-			cout<<" vaa:"<<vaa<<" vbb:"<<vbb<<" vcc:"<<vcc<<endl;
+			//cout<<" vaa:"<<vaa<<" vbb:"<<vbb<<" vcc:"<<vcc<<endl;
 			T1T2<<" vaa_n:"<<vaa<<" vbb_n:"<<vbb<<" vcc_n:"<<vcc<<endl<<"IDC_p: "<<IDC<<endl;
 			
 			//menos efficiente com isto!?

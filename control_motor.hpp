@@ -90,12 +90,12 @@ extern double iaa_p,vaa_p,cos_phi,two_phi,desc_p;
 #define current_control_y_cel	300.0// 3000//?
 
 
-#define current_control_x_p /*0.000001*/1.99//1.9alterei//0.1//1.92//1.9//2//(0.4)//1//11.0//(6.23*1.11)//0.4//1//0.3//100//5.0//110//5//10//20.0//10//(7)//0.7//10//? 13marco
-#define current_control_x_i /*0.2*/0.002//0.001alterei//0.00001//(0.0006*0.2)//(0.098)//4.5//0.006//7.0//(0.00006)//0.000625//?
+#define current_control_x_p /*0.000001*/1.9//1.9alterei//0.1//1.92//1.9//2//(0.4)//1//11.0//(6.23*1.11)//0.4//1//0.3//100//5.0//110//5//10//20.0//10//(7)//0.7//10//? 13marco
+#define current_control_x_i /*0.2*/0.001//0.001alterei//0.00001//(0.0006*0.2)//(0.098)//4.5//0.006//7.0//(0.00006)//0.000625//?
 #define current_control_x_d 0.0//?
 //float current_control_x_Min_pid_res = -2/3*VDC;// (-400)//100?
 //float current_control_x_Max_pid_res = 2/3*VDC;//400//100?
-#define current_control_x_cel	0.08//0.04alterei isto//0.002//.001//?3000
+#define current_control_x_cel	0.04//0.04alterei isto//0.002//.001//?3000
 
 ofstream fTorque ("torque.txt");
 ofstream fVel ("speed.txt");
@@ -177,7 +177,7 @@ public:
 	tThreePhase abc_voltage;
 	tThreePhase abc_voltage_svpwm;
 	tTwoPhaseDQ IDQ;
-	tTwoPhaseDQ VDQ;
+		
 	tTwoPhaseDQ VDQ_rfa;
 	tTwoPhase V/*,v_*/;
 	tTwoPhaseDQ IDQ_rotor;
@@ -197,7 +197,7 @@ public:
 	void torque_control_tune_pid();//TODO remove at end
 	//get_VDQ +++++++++++++++++++++++++++
 	tTwoPhase get_V(/*const*/ );
-	
+	void decouple();
 private:
 
 	_pid vel; 

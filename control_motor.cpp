@@ -7,7 +7,6 @@ double m_Tr_calc_gl=Trrr;//TODO insert at the end Tr motor value
 double M=0.001500;//0.050382;/*0.51233;*///0.0117//0.069312//mutual inductance
 double Ls=(0.000140+M);//0.051195;/*(0.00845+M);*///0.014//0.07132
 
-
 double Lr=(0.000140+M);//0.052571;/*(0.00515+M);*///0.014//0.07132
 double J=(0.071);//TODO:?? 1pv5135-4ws14: 0.071
 double ro=(1.0-(M*M)/(Ls*Lr));//0.999863//1-M*M/(Ls*Lr)//alterar nome
@@ -21,8 +20,6 @@ double Vmax=VDC/sqrt(3.0);
 /*#define*/double Rm=650.0; //TODO, nao funcionou c define nao sei pk, talvez dpois d inserir .0 ja deia, como esta agora
 /*#define*/double Llr=(Lr-M);//0.0021891 //TODO verificar Llr=Lr-M;
 
-
-
 double roLs=(ro*Ls);//0.013998//ro*Ls
 
 tTwoPhase v_(0.0,0.0);
@@ -33,7 +30,7 @@ double T = 0.0001;//0.0001-10khz//TODO: PWM periode 0.000125-8khz
 double vel_p=20.0;//20.0;//6;//1000;//1;//1//9//1.1//(3)//6.0*0.9//(2/*4.5*/)//TODO: speed controller gain 
 double vel_i=0.0006;//0.00006;//TODO: speed controller integral gain 
 double torque_control_p=3.6;//TODO: torque controller gain
-double torque_control_i=0.001/*alterei 0.01 0.008*/;//TODO: torque controller integral gain
+double torque_control_i=0.01/* 0.008*/;//TODO: torque controller integral gain
 
 double IDC2_3=0.0;
 double IDC=0.0;//TODO: remove at end. to calc medium value of IDC 
@@ -44,11 +41,192 @@ double iaa_p,vaa_p,cos_phi,two_phi=0.0,desc_p=0.0;
 ofstream sfData_va_ia ("Data_va_ia.dat");
 double Tm1;
 
+tTwoPhaseDQ VDQ_ant(0.0,0.0);
+tTwoPhaseDQ VDQ(0.0,0.0);
+double const_VDQ_d=0.0;
+double const_VDQ_q=0.0;
+
+tThreePhase v(0.0,0.0,0.0);
+double T0,T1,T2;//2-errado pois T1+T2 estava a dar > k T. 1-T0 indica o tempo por periodo k esta desligado
+int a1,b1,c1,a2,b2,c2;//interruptores da ponte trifásica, 1- first time T1, 2- second time T2
+double pwm_a=0.0,pwm_b=0.0,pwm_c=0.0;//pwm_a- racio time of T that superior leg of a is open, inferior leg complementar
+
+ofstream T1T2 ("T1T2.txt");
+
 double dy_nt_(double /*&*/y1, double /*&*/y_1){//y1 significa y[n+1] 
 	return ((y1-y_1)/(2*T));};
 
 double d2y_nt_(double /*&*/y1, double /*&*/y,double /*&*/y_1){//derived can only be obtained  when n>=? 
 	return ((y1-2*y+y_1)/(T*T));};
+
+////////To implement SVPWM:
+void svpwm(tTwoPhase v,double RotorFluxAngle_,control_loops & control_){//tTwoPhase- bifasico, tendo como referencia o estator
+	
+	double ang=atan2(v.beta,v.alpha);
+
+	//cout<<"angulo"<<ang<<endl;
+	T1T2<<"angulo: "<<ang<<endl;
+
+	double ang_u = 0.0;
+	//if (ang>=0&&ang<(PI/6))
+	//	ang_u = ang - PI/6;//gives negative
+	//else if (ang>=PI/6 && ang<(PI/3))
+	//		ang_u = ang - PI/6;//gives positive
+	if (ang>=0&&ang<(PI/3))
+		ang_u = ang - PI/6;//cos positive number == cos negative number
+	
+	else if (ang>=PI/3 && ang<(2*PI/3))
+			ang_u = ang - PI/2 ;
+	//else if (ang>=PI/2 && ang<(2*PI/3))
+		//	ang_u = ang - PI/2;
+	
+	else if (ang>=2*PI/3 && ang<(PI))
+		//	ang_u = 5*PI/6 - ang;
+	//else if (ang>= 5*PI/6 && ang<PI)
+			ang_u = ang - 5*PI/6;
+	
+	
+	else if (ang>=-PI && ang<(-2*PI/3))
+			//ang_u = ang + 5*PI/6;//gives neg
+	//else if (ang>= -5*PI/6 && ang<-2*PI/3)
+			ang_u = ang + 5*PI/6;//gives positive	 	
+	////////////
+	else if (ang>=-2*PI/3 && ang<(-PI/3))
+			//ang_u = 3*PI/2 - ang;
+	//else if (ang>= 3*PI/2 && ang<5*PI/3)
+			ang_u = ang + PI/2;
+		
+	else //if (ang>=5*PI/3 && ang<(11*PI/6))
+			//ang_u = 11*PI/6 - ang;
+	//else /*if (ang>= 11*PI/3 && ang<0)*/
+			ang_u = ang + PI/6;
+					
+	float max_mod_v_ref = VDC/(cos(ang_u)*CONST_SQRT3_);//TODO uncoment in the end cos for max 
+T1T2 << "max_mod_v_ref "<< max_mod_v_ref<<endl;
+//max_mod_v_ref=abs(max_mod_v_ref);//abs para double
+
+	if ( (sqrt(v.beta*v.beta+v.alpha*v.alpha)) > max_mod_v_ref ){
+		//if (VDQ_ant.d > max_mod_v_ref)VDQ.d=max_mod_v_ref;
+ 		//else if (VDQ_ant.d  < -max_mod_v_ref)VDQ.d = -max_mod_v_ref; else VDQ.d=VDQ_ant.d;
+		VDQ.q=0;
+		//control_.decouple();
+		if (-VDQ_ant.d > -const_VDQ_d+sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref) ) VDQ.d= -(-const_VDQ_d+sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref));
+		else if (VDQ_ant.d > -const_VDQ_d+sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref) )VDQ.d = -const_VDQ_d+sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref);
+		else VDQ.d=VDQ_ant.d;
+		
+		VDQ.d+=const_VDQ_d;
+		VDQ.q+=const_VDQ_q;
+		
+		v=InvPark((RotorFluxAngle_),VDQ);
+		if ( (sqrt(v.beta*v.beta+v.alpha*v.alpha)) > (max_mod_v_ref) )//TODO
+		{	
+		//	VDQ.q=0;
+		//	//control_.decouple();
+		//	if (-VDQ_ant.d > -const_VDQ_d-sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref) ) VDQ.d= -(-const_VDQ_d-sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref));
+		//	else if (VDQ_ant.d > -const_VDQ_d-sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref) )VDQ.d = -const_VDQ_d-sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref);
+		//	else VDQ.d=VDQ_ant.d;
+		//
+		//	VDQ.d+=const_VDQ_d;
+		//	VDQ.q+=const_VDQ_q;
+		//
+		//	v=InvPark((RotorFluxAngle_),VDQ);
+			T1T2<<"v.beta_v.alpha"<<sqrt(v.beta*v.beta+v.alpha*v.alpha)<<endl;
+			v.beta = sin(ang)*max_mod_v_ref;
+			v.alpha = cos(ang)*max_mod_v_ref;
+		}
+		
+		/*if (v.alpha > 0 && (v.alpha*v.alpha)>=(max_mod_v_ref*max_mod_v_ref)){
+			v.alpha = max_mod_v_ref;
+			v.beta=0;	}
+		else if ( v.alpha < 0 && (v.alpha*v.alpha) >= (max_mod_v_ref*max_mod_v_ref) ){
+				v.alpha = -max_mod_v_ref;
+				v.beta=0;}			qqq
+		else	
+			v.beta = sqrt(max_mod_v_ref*max_mod_v_ref-v.alpha*v.alpha);
+		*/
+		T1T2<< "v.beta "<<v.beta;
+		T1T2<<"v.alpha"<<v.alpha<<endl;
+	}
+//here	////VDQ_alpha_esc=v.alpha;//sqrt(v.beta*v.beta+v.alpha*v.alpha)/2/3*VDC/*max_mod_v_ref*/*sin(ang);
+	////VDQ_beta_esc=v.beta;//sqrt(v.beta*v.beta+v.alpha*v.alpha)/2/3*VDC/*max_mod_v_ref*/*cos(ang);
+	
+	if (ang>=0&&ang<(PI/3)){
+			T1=3.0/2.0*T/VDC*(v.alpha-v.beta/CONST_SQRT3_);//T1=abs(v.alpha)/abs(Clarke(tThreePhase(2*VDC/3,-VDC/3,-VDC/3)).alpha)*T;
+			a1=1;b1=0;c1=0;	//ozz 
+			T2=CONST_SQRT3_*T/VDC*v.beta;//T2=3*T/(2*VDC)*(v.alpha-1/CONST_SQRT3_*v.beta);//T2=abs(v.beta)/abs((Clarke(tThreePhase(VDC/3,VDC/3,-2*VDC/3)).beta)*T);
+			a2=1;b2=1;c2=0	;/*v_ooz*/
+			
+			if ((T1+T2)<T) pwm_a=(T1+T2)/T; else pwm_a=1;
+			if ((T1+T2)<T) pwm_b=T2/T; else pwm_b=T2/(T1+T2);
+			pwm_c=0;
+	}
+	else if(ang>=(PI/3)&&ang<(2.0*PI/3)){
+			T1=3.0*T/2.0/VDC*(v.alpha+1/CONST_SQRT3_*v.beta);//T1=abs(v.alpha)/abs(Clarke(tThreePhase(VDC/3,VDC/3,-2*VDC/3)).alpha)*T;
+			a1=1;b1=1;c1=0;//ooz 
+			T2=3.0*T/VDC/2.0*(v.beta/CONST_SQRT3_-v.alpha);
+			a2=0;b2=1;c2=0;/*v_zoz*/
+			
+			if ((T1+T2)<T) pwm_a=T1/T; else pwm_a=T1/(T1+T2);
+			if ((T1+T2)<T) pwm_b=(T1+T2)/T; else pwm_b=1;
+			pwm_c=0;
+	}
+	else if(ang>=(2.0*PI/3)&&ang<(PI)){
+			T1=T*CONST_SQRT3_/VDC*v.beta;//T1=abs(v.alpha)/abs(Clarke(tThreePhase(-VDC/3,2*VDC/3,-VDC/3)).alpha)*T;
+			a1=0;b1=1;c1=0;//zoz 
+			T2=CONST_SQRT3_/2.0*T/VDC*(-v.beta-CONST_SQRT3_*v.alpha);//T2=abs(v.beta)/abs(Clarke(tThreePhase(-2*VDC/3,VDC/3,VDC/3)).beta)*T/*v_zoo*/;
+			a2=0;b2=1;c2=1;
+			
+			pwm_a=0;
+			if ((T1+T2)<T) pwm_b=(T1+T2)/T; else pwm_b=1;
+			if ((T1+T2)<T) pwm_c=T2/T; else pwm_c=T2/(T1+T2);
+	}
+	else if(ang>=(-PI)&&ang<(-2.0*PI/3)){
+			T1=3.0*T/2.0/VDC*(-v.alpha+v.beta/CONST_SQRT3_);//T1=abs(v.alpha)/abs(Clarke(tThreePhase(-2*VDC/3,VDC/3,VDC/3)).alpha)*T;
+			a1=0;b1=1;c1=1;//zoo 
+			T2=-CONST_SQRT3_*T/VDC*v.beta;//T2=abs(v.beta)/abs(Clarke(tThreePhase(-VDC/3,-VDC/3,2*VDC/3)).beta)*T/*v_zzo*/;
+			a2=0;b2=0;c2=1;
+			
+			pwm_a=0;
+			if ((T1+T2)<T) pwm_b=T1/T; else pwm_b=T1/(T1+T2);
+			if ((T1+T2)<T) pwm_c=(T1+T2)/T; else pwm_c=1;			
+	}
+	else if(ang>=(-2*PI/3)&&ang<(-PI/3)){
+			T1=CONST_SQRT3_*T/2.0/VDC*(-v.alpha*CONST_SQRT3_-/*2*/v.beta);//T1=abs(v.alpha)/abs(Clarke(tThreePhase(-VDC/3,-VDC/3,2*VDC/3)).alpha)*T;
+			a1=0;b1=0;c1=1;//zzo 
+			T2=CONST_SQRT3_*T/2.0/VDC*(-v.beta+v.alpha*CONST_SQRT3_);//T2=abs(v.beta)/abs(Clarke(tThreePhase(VDC/3,-2*VDC/3,VDC/3)).beta)*T/*v_ozo*/;
+			a2=1;b2=0;c2=1;
+			
+			if ((T1+T2)<T) pwm_a=T2/T; else pwm_a=T2/(T1+T2);
+			pwm_b=0;
+			if ((T1+T2)<T) pwm_c=(T1+T2)/T; else pwm_c=1;
+	}
+	else /*if(ang>=(-PI/3)&&ang<(0))*/{
+			T1=-1.0*T/VDC*CONST_SQRT3_*v.beta;//T1=abs(v.alpha)/abs(Clarke(tThreePhase(VDC/3,-2*VDC/3,VDC/3)).alpha)*T;
+			a1=1;b1=0;c1=1;//ozo 
+			T2=3.0*T/2.0/VDC*(v.beta/CONST_SQRT3_+v.alpha);//T2=abs(v.beta)/abs(Clarke(tThreePhase(2*VDC/3,-VDC/3,-VDC/3)).beta)*T/*v_ozz*/;
+			a2=1;b2=0;c2=0;
+			
+			if ((T1+T2)<T) pwm_a=(T1+T2)/T; else pwm_a=1;
+			pwm_b=0;
+			if ((T1+T2)<T) pwm_c=T1/T; else pwm_c=T1/(T1+T2);		
+	};
+	 	
+			
+	 T0=T-(T1+T2);//T0 time of period that are off 1, 1, 1 or 0, 0, 0
+	//doc.: para cada periodo T: T1 de tempo com os respectivos a1, b1, c1; T2 de tempo com os respectivos a2, b2, c2. O interruptor correspondente há outra parte da "perna" será o complementar;
+	//TIMERS
+	 //a1,T1; a2,T2 	;a0,T0;   a off
+	 //b1,T1; b2,T2 	;b0,T0;   and b off
+	 //c1,T1 ;c2,T2 	;c0,T0;   and c off
+	//OR: PWMs
+	//ofstream T1T2 ("T1T2.txt",ios::app); 
+	//cout<<" T1:"<<T1<<" a1:"<<a1<<" b1:"<<b1<<" c1:"<<c1<<"   T2:"<<T2<<" a2:"<<a2<<" b2:"<<b2<<" c2:"<<c2<<"    T0:"<<T0<<endl;
+	//cout<<" pwm_a:"<<pwm_a<<" pwm_b:"<<pwm_b<<" pwm_c:"<<pwm_c<<endl;
+	T1T2<<" T1:"<<T1<<" a1:"<<a1<<" b1:"<<b1<<" c1:"<<c1<<"   T2:"<<T2<<" a2:"<<a2<<" b2:"<<b2<<" c2:"<<c2<<"    T0:"<<T0<<endl;
+	T1T2<<" pwm_a:"<<pwm_a<<" pwm_b:"<<pwm_b<<" pwm_c:"<<pwm_c<<endl;
+v_=v;//TODO remove in embedded
+
+};
 
 //!!!!!!!!!!!!!!double dy_nt(double &y1, double &y_1);//y1 means y[n+1] 
 	//return dynt=(y1-y_1)/(2*per);
@@ -205,7 +383,7 @@ double motor::torque_g(double Vds,double Vqs,double angle_get_wm){//torque gener
 //		torq_g=3.0/*2.0*/*np*(iqs*fds-ids*fqs);//TODO sobre 2?? acho que n
 //		/*cout<<"ids"<<ids<<endl<<"iqs"<<iqs<<endl;*/fTorque<<n*T<<" sec. Torque_gerado:"<<torq_g/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl;//<<"torq_l:"<<torq_L<<endl;	
 	
-	cout<<"torq: "<<t<<endl<<"fqr: "<<fqr<<endl;
+	//cout<<"torq: "<<t<<endl<<"fqr: "<<fqr<<endl;
 	//double eff_act=(t/*np*/*wr)/(IDC*VDC);
 	//if (!std::isnan(eff_act))eff_act=(t/*np*/*wr)/(IDC*VDC);else eff_act=0.0001;
 	//eff_act/=(IDC*VDC)
@@ -251,8 +429,13 @@ double motor::get_wr(double va,double vb,double vc/*double torq_g,double torq_L*
 			if (T_G_R_ant!=T_G_R)wr = wr *T_G_R/T_G_R_ant;
 			T_G_R_ant=T_G_R;
 			}
-		Torq_net=torque(va,vb,vc)-torq_L;
-		wr=wr+(Torq_net)*T/(J+R*R*MASSA/(T_G_R*T_G_R));
+		if(e==true){
+			Torq_net=torque(va,vb,vc)-torq_L;
+			wr=wr+(Torq_net)*T/(J+R*R*MASSA/(T_G_R*T_G_R));
+			}
+			else{ 
+				wr=wr+(torque(va,vb,vc)-torq_L)*T/J;
+				}
 		return wr;
 	};
 	
@@ -284,9 +467,9 @@ double motor::get_wr(double va,double vb,double vc/*double torq_g,double torq_L*
 
 
 
-	//double control_loops::get_rot_fl_an(){return RotorFluxAngle;};
+	double control_loops::get_rot_fl_an(){return RotorFluxAngle;};
 
-	control_loops::control_loops():/*v_(0.0,0.0),*//*IDQq_p(0.0),stc_p(0.0),*/ abc_voltage_svpwm(0.0,0.0,0.0),VDQ_rfa(0.0,0.0),/*sobre_Tr_comp(0.0),*/wmr__1(0.0),imrref(0.0),abc_voltage(0.0,0.0,0.0),IDQ(0.0001,0.0001),VDQ(0.0,0.0),/*rot_fl_an(0.0),*/Theta_r(0.0),w_ref(0.0),V(0.0,0.0),IDQ_rotor(0.0,0.0),VDQ_rotor(0.0,0.0),IDQ_d_1(0.0),IDQ_d_(0.0),IDQ_d1(0.0),IDQ_d_p(0.0),IDQ_d_pp(0.0),IDQ_q_1(0.0),IDQ_q_(0.0),IDQ_q1(0.0),IDQ_q_p(0.0),IDQ_q_pp(0.0),wmr_(0.0),wmr1(0.0),wmr_p(0.0){
+	control_loops::control_loops():/*v_(0.0,0.0),*//*IDQq_p(0.0),stc_p(0.0),*/ abc_voltage_svpwm(0.0,0.0,0.0),VDQ_rfa(0.0,0.0),/*sobre_Tr_comp(0.0),*/wmr__1(0.0),imrref(0.0),abc_voltage(0.0,0.0,0.0),IDQ(0.0001,0.0001)/*,VDQ(0.0,0.0)*/,/*VDQ_ant(0.0,0.0),*//*rot_fl_an(0.0),*/Theta_r(0.0),w_ref(0.0),V(0.0,0.0),IDQ_rotor(0.0,0.0),VDQ_rotor(0.0,0.0),IDQ_d_1(0.0),IDQ_d_(0.0),IDQ_d1(0.0),IDQ_d_p(0.0),IDQ_d_pp(0.0),IDQ_q_1(0.0),IDQ_q_(0.0),IDQ_q1(0.0),IDQ_q_p(0.0),IDQ_q_pp(0.0),wmr_(0.0),wmr1(0.0),wmr_p(0.0){
 			/*Tr_calc_gl=Trrr/*0.17703*//*;m_Tr_calc_gl=Trrr*//*0.17703*/;//TODO insert at the end Tr motor value
 			//torque_control_Min_pid_res=-150;//?
 			//torque_control_Max_pid_res=150;
@@ -326,8 +509,13 @@ void control_loops::get_VDC(float vdc){VDC=vdc;Vmax=VDC/sqrt(3);};//TODO adapt i
 //double control_loops::VDQ_rotor_d(){return VDQ_rotor.d;};
 //double control_loops::VDQ_rotor_q(){return VDQ_rotor.q;};
 
+//void control_loops::decouple(){
+	
+//}
+
 	//get_VDQ +++++++++++++++++++++++++++
 tTwoPhase control_loops::get_V(/*const*/ ){
+		
 			//float torque_control_Min_pid_res=-150;//?
 			//float torque_control_Max_pid_res=150;
 			current_control_y_Min_pid_res=-400.0;//(-2.0)/3*VDC;
@@ -499,14 +687,15 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 			//VDQ.q=current_control_y.get_pid_result(); //							
 			//double VDQq_p=VDQ.q;
 			VDQ.q=torque_control.get_pid_result();			
-
+			VDQ_ant=VDQ;
 //--------------Rotor Time Constant value adjust:			
 						
 			
 			fIDQ<<n*T<<" sec."<<" VDQ_rfa.d: "<<VDQ_rfa.d<<endl<<" IDQd: "<<IDQd<<" IDQq: "<<IDQq<<endl/*<<"(IDQd^2+IDQq^2)^(1/2): "<<sqrt(IDQd*IDQd+IDQq*IDQq)*//*IDQd+IDQq*/<<"IDC:"<<IDC/*<<"IDC2_3:"<<IDC2_3*/<<endl;
 						
 			
-			cout<<"VDQ.q:"<<VDQ.q<<endl;;fIDQ<<"VDQ.d:"<<VDQ.d<<endl<<"VDQ.q:"<<VDQ.q<<endl;
+			//cout<<"VDQ.q:"<<VDQ.q<<endl;
+			fIDQ<<"VDQ.d:"<<VDQ.d<<endl<<"VDQ.q:"<<VDQ.q<<endl;
 			
 			if (n>200 && n<100000){Rr*=1.0000022/*1/1.0000002*/;};//TODO remove at end, this is to simulate variations of Tr, the real value influences the gain error
 			
@@ -523,14 +712,15 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 						/*else if (IDQq<-10.5 && velocidade >2 ){sinal_=-1;}*//*else if (IDQq>10.5 && velocidade >2){sinal_=1;}*/else{sinal_=0;}
 				//if (velocidade<-30){sinal_*=-1;}else if (velocidade>30){sinal_=1;} else {sinal_=0;};
 					//TODO vel velref idqq
-				m_Tr_calc_gl=((m_Tr_calc_gl)+sinal_*error*0.000004/*0.000025*//*pi_contr*/);
+				m_Tr_calc_gl=((m_Tr_calc_gl)+sinal_*error*0.000002/*0.000004*//*0.000025*//*pi_contr*/);
 	
 				fIDQ<<" Tr___ "<<m_Tr_calc_gl/*Tr___*/<<" error: "<<error<<endl;
 				}; 
 			fIDQ<<" TR do motor: "<<Lr/Rr<<endl;
 			//////stc_p=VDQ.q;
 
-//+Vdecouple-------------To get Voltage direct and quadracture after decoupling	
+	//part of, used in function decouple			
+	//+Vdecouple-------------To get Voltage direct and quadracture after decoupling	
 			IDQ_d_1=IDQ_d_;
 			IDQ_d_=IDQ_d1;
 			IDQ_d1=IDQ.d;
@@ -550,17 +740,21 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 			wmr1=Wm;
 			
 			wmr_p=dy_nt_(wmr1, wmr__1);
-		
-			VDQ.d=VDQ.d/*-wmr_1*Lsro*IDQ.q*//*(this is part of usx, the PI output)+Rs*IDQ_d1*/+(/*(idem previous)Lsro+*/T_lag*Rs)*IDQ_d_p+T_lag*Lsro*IDQ_d_pp-wmr1*(Lsro-T_lag*Rs)*IDQ_q1+wmr1*wmr1*(T_lag*Lsro*IDQ_d1+T_lag*(Ls-Lsro)*abs(angle.get_imr()))/*TODO:modulo imr*/-T_lag*Lsro*IDQ_q1*wmr_p;				
-			VDQ.q=VDQ.q/*+wmr_1*Lsro*IDQ_d_p*T_lag*//*(this is part of usy, the PI output)+Lsro*IDQ_q_p*//*-wmr1*T_lag*Lsro*IDQ_d_p*//*(ideyntastic_check_on_open = 1 previous)+Rs*IDQ_q1*/+T_lag*Rs*IDQ_q_p+T_lag*Lsro*IDQ_q_pp+wmr1*(Lsro-T_lag*Rs)*IDQ_d1+wmr1*wmr1*T_lag*Lsro*IDQ_q1+(T_lag*Lsro*IDQ_d1+T_lag*(Ls-Lsro)*abs(angle.get_imr()))*wmr_p+(Ls-Lsro)*wmr1*abs(angle.get_imr());//angle.wmr1*Lsro*IDQ.d+(Ls-Lsro)*wmr1*angle.get_imr();	
-			if ( /*VDQ.q > 0 && */VDQ.q > VDC/sqrt(3)*0.96 ) VDQ.q = VDC/sqrt(3)*0.96;
-			else if ( /*VDQ.q < 0 &&*/ VDQ.q < -VDC/sqrt(3)*0.96 ) VDQ.q = -VDC/sqrt(3)*0.96;
-//-------------			
-				
 			
+			//this->decouple();
+
+			const_VDQ_d=/*VDQ.d*//*-wmr_1*Lsro*IDQ.q*//*(this is part of usx, the PI output)+Rs*IDQ_d1*/+(/*(idem previous)Lsro+*/T_lag*Rs)*IDQ_d_p+T_lag*Lsro*IDQ_d_pp-wmr1*(Lsro-T_lag*Rs)*IDQ_q1+wmr1*wmr1*(T_lag*Lsro*IDQ_d1+T_lag*(Ls-Lsro)*abs(angle.get_imr()))/*TODO:modulo imr*/-T_lag*Lsro*IDQ_q1*wmr_p;				
+			const_VDQ_q=/*VDQ.q*//*+wmr_1*Lsro*IDQ_d_p*T_lag*//*(this is part of usy, the PI output)+Lsro*IDQ_q_p*//*-wmr1*T_lag*Lsro*IDQ_d_p*//*(ideyntastic_check_on_open = 1 previous)+Rs*IDQ_q1*/+T_lag*Rs*IDQ_q_p+T_lag*Lsro*IDQ_q_pp+wmr1*(Lsro-T_lag*Rs)*IDQ_d1+wmr1*wmr1*T_lag*Lsro*IDQ_q1+(T_lag*Lsro*IDQ_d1+T_lag*(Ls-Lsro)*abs(angle.get_imr()))*wmr_p+(Ls-Lsro)*wmr1*abs(angle.get_imr());//angle.wmr1*Lsro*IDQ.d+(Ls-Lsro)*wmr1*angle.get_imr();	
+			//TODONEW if ( /*VDQ.q > 0 && */VDQ.q > VDC/sqrt(3)*0.96 ) VDQ.q = VDC/sqrt(3)*0.96;
+			//TODONEW else if ( /*VDQ.q < 0 &&*/ VDQ.q < -VDC/sqrt(3)*0.96 ) VDQ.q = -VDC/sqrt(3)*0.96;			
+
+			VDQ.d+=const_VDQ_d;
+			VDQ.q+=const_VDQ_q;
 //-------------			
-			cout<<"VDQ.d +decoupling:"<<VDQ.d<<endl;;fIDQ<<"VDQ.d +decoupling:"<<VDQ.d<<endl;
-			cout<<"VDQ.q +decoupling:"<<VDQ.q<<endl;;fIDQ<<"VDQ.q +decoupling:"<<VDQ.q<<endl;
+			//cout<<"VDQ.d +decoupling:"<<VDQ.d<<endl;
+			;fIDQ<<"VDQ.d +decoupling:"<<VDQ.d<<endl;
+			//cout<<"VDQ.q +decoupling:"<<VDQ.q<<endl;
+			;fIDQ<<"VDQ.q +decoupling:"<<VDQ.q<<endl;
 			//VDQ.d=VDQ.d-angle.get_wm()*Lsro*IDQ.q;cout<<"VDQD+"<<VDQ.d<<endl;//Rs*IDQ.d-np*2/3*motor::wr*(Lsro+Lrro)*IDQ.q;				
 			//VDQ.q=VDQ.q+angle.get_wm()*Lsro*IDQ.d+(Ls-Lsro)*angle.get_wm()*angle.get_imr();
 
