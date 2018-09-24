@@ -126,7 +126,7 @@ float dy_nt_(float /*&*/y1, float /*&*/y_1){//y1 significa y[n+1]
 float d2y_nt_(float /*&*/y1, float /*&*/y,float /*&*/y_1){//derived can only be obtained  when n>=? 
 	return ((y1-2*y+y_1)/(T*T));}
 
-FOC::FOC():const_VDQ_d(0.0),const_VDQ_q(0.0),RotorFluxAngle(0.0),angle(0.0),abc_current(0.0,0.0,0.0),vel_Min_pid_res(-300),vel_Max_pid_res(300),IDQ(0.0,0.0),VDQ(0.0,0.0),IDQ_d_1(0.0),IDQ_d_(0.0),IDQ_d1(0.0),IDQ_d_p(0.0),IDQ_d_pp(0.0),IDQ_q_1(0.0),IDQ_q_(0.0),IDQ_q1(0.0),IDQ_q_p(0.0),IDQ_q_pp(0.0),wmr_(0.0),wmr1(0.0),wmr_p(0.0),v(0.0,0.0),vaa(0.0),vbb(0.0),vcc(0.0),Tr_calc(Tr),VDQ_rtc(0.0,0.0){};
+FOC::FOC():VDQ_ant(0.0),const_VDQ_d(0.0),const_VDQ_q(0.0),RotorFluxAngle(0.0),angle(0.0),abc_current(0.0,0.0,0.0),vel_Min_pid_res(-300),vel_Max_pid_res(300),IDQ(0.0,0.0),VDQ(0.0,0.0),IDQ_d_1(0.0),IDQ_d_(0.0),IDQ_d1(0.0),IDQ_d_p(0.0),IDQ_d_pp(0.0),IDQ_q_1(0.0),IDQ_q_(0.0),IDQ_q1(0.0),IDQ_q_p(0.0),IDQ_q_pp(0.0),wmr_(0.0),wmr1(0.0),wmr_p(0.0),v(0.0,0.0),vaa(0.0),vbb(0.0),vcc(0.0),Tr_calc(Tr),VDQ_rtc(0.0,0.0){};
 
 FOC::~FOC(){};
 
@@ -243,6 +243,7 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 			VDQ.d=current_control_x.get_pid_result();//because tension is not proporcional of currents, used in controll as currents but after decoupling, tension because is a Voltage source inverter 											   
 			VDQ.q=torque_control.get_pid_result();				
 			/*here*/
+			VDQ_ant=VDQ;
 		}
 		
 	//+Vdecouple-------------To get Voltage direct and quadracture after decoupling	
