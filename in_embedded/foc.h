@@ -45,6 +45,7 @@ class FOC
 	  tThreePhase abc_voltage_svpwm;
 	  float RotorFluxAngle;
 	  float VDQ_rtc;
+	  float const_VDQ_d, const_VDQ_q;
    protected:
    private:
 	RotFluxAng angle;

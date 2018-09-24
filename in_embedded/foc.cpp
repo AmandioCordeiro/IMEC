@@ -69,6 +69,8 @@ using namespace Maths;
 
 long n=0;
 
+
+
 static const s32fp sqrt3inv1 = FP_FROMFLT(0.57735026919); //1/sqrt(2)
 static const s32fp sqrt3inv2 = 2*sqrt3inv1; //2/sqrt(2)
 static const s32fp sqrt3ov2 = (SQRT3 / 2);
@@ -124,7 +126,7 @@ float dy_nt_(float /*&*/y1, float /*&*/y_1){//y1 significa y[n+1]
 float d2y_nt_(float /*&*/y1, float /*&*/y,float /*&*/y_1){//derived can only be obtained  when n>=? 
 	return ((y1-2*y+y_1)/(T*T));}
 
-FOC::FOC():RotorFluxAngle(0.0),angle(0.0),abc_current(0.0,0.0,0.0),vel_Min_pid_res(-300),vel_Max_pid_res(300),IDQ(0.0,0.0),VDQ(0.0,0.0),IDQ_d_1(0.0),IDQ_d_(0.0),IDQ_d1(0.0),IDQ_d_p(0.0),IDQ_d_pp(0.0),IDQ_q_1(0.0),IDQ_q_(0.0),IDQ_q1(0.0),IDQ_q_p(0.0),IDQ_q_pp(0.0),wmr_(0.0),wmr1(0.0),wmr_p(0.0),v(0.0,0.0),vaa(0.0),vbb(0.0),vcc(0.0),Tr_calc(Tr),VDQ_rtc(0.0,0.0){};
+FOC::FOC():const_VDQ_d(0.0),const_VDQ_q(0.0),RotorFluxAngle(0.0),angle(0.0),abc_current(0.0,0.0,0.0),vel_Min_pid_res(-300),vel_Max_pid_res(300),IDQ(0.0,0.0),VDQ(0.0,0.0),IDQ_d_1(0.0),IDQ_d_(0.0),IDQ_d1(0.0),IDQ_d_p(0.0),IDQ_d_pp(0.0),IDQ_q_1(0.0),IDQ_q_(0.0),IDQ_q1(0.0),IDQ_q_p(0.0),IDQ_q_pp(0.0),wmr_(0.0),wmr1(0.0),wmr_p(0.0),v(0.0,0.0),vaa(0.0),vbb(0.0),vcc(0.0),Tr_calc(Tr),VDQ_rtc(0.0,0.0){};
 
 FOC::~FOC(){};
 
@@ -264,11 +266,13 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 			
 			wmr_p=dy_nt_(wmr1, wmr__1);
 		
-			VDQ.d=VDQ.d+(T_lag*Rs)*IDQ_d_p+T_lag*Lsro*IDQ_d_pp-wmr1*(Lsro-T_lag*Rs)*IDQ_q1+wmr1*wmr1*(T_lag*Lsro*IDQ_d1+T_lag*(Ls-Lsro)*abs(angle.get_imr()))-T_lag*Lsro*IDQ_q1*wmr_p;				
-			VDQ.q=VDQ.q+T_lag*Rs*IDQ_q_p+T_lag*Lsro*IDQ_q_pp+wmr1*(Lsro-T_lag*Rs)*IDQ_d1+wmr1*wmr1*T_lag*Lsro*IDQ_q1+(T_lag*Lsro*IDQ_d1+T_lag*(Ls-Lsro)*abs(angle.get_imr()))*wmr_p+(Ls-Lsro)*wmr1*abs(angle.get_imr());
+			/*VDQ.d=VDQ.d+*/const_VDQ_d=(T_lag*Rs)*IDQ_d_p+T_lag*Lsro*IDQ_d_pp-wmr1*(Lsro-T_lag*Rs)*IDQ_q1+wmr1*wmr1*(T_lag*Lsro*IDQ_d1+T_lag*(Ls-Lsro)*abs(angle.get_imr()))-T_lag*Lsro*IDQ_q1*wmr_p;				
+			/*VDQ.q=VDQ.q+*/const_VDQ_q=T_lag*Rs*IDQ_q_p+T_lag*Lsro*IDQ_q_pp+wmr1*(Lsro-T_lag*Rs)*IDQ_d1+wmr1*wmr1*T_lag*Lsro*IDQ_q1+(T_lag*Lsro*IDQ_d1+T_lag*(Ls-Lsro)*abs(angle.get_imr()))*wmr_p+(Ls-Lsro)*wmr1*abs(angle.get_imr());
 			
-			if ( /*VDQ.q > 0 && */VDQ.q > VDC/sqrt(3)*0.96 ) VDQ.q = VDC/sqrt(3)*0.96;
-			else if ( /*VDQ.q < 0 && */VDQ.q < -VDC/sqrt(3)*0.96 ) VDQ.q = -VDC/sqrt(3)*0.96;
+			//if ( /*VDQ.q > 0 && */VDQ.q > VDC/sqrt(3)*0.96 ) VDQ.q = VDC/sqrt(3)*0.96;
+			//else if ( /*VDQ.q < 0 && */VDQ.q < -VDC/sqrt(3)*0.96 ) VDQ.q = -VDC/sqrt(3)*0.96;
+			VDQ.d+=const_VDQ_d;
+			VDQ.q+=const_VDQ_q;
 	//-------------			
 		
 		if (n < 10000000)n++;//TODO:number of iterations 
@@ -310,12 +314,26 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 				//ang_u = 11*PI/6 - ang;
 		//else /*if (ang>= 11*PI/3 && ang<0)*/
 				ang_u = ang + PI/6;
-								
+		
+		//to limit value voltage:						
 		float max_mod_v_ref = VDC/(cos(ang_u)*CONST_SQRT3_);//
 		if ( ( sqrt(v.beta*v.beta + v.alpha*v.alpha)) > max_mod_v_ref )
 		{
-			v.beta = sin(ang)*max_mod_v_ref;
-			v.alpha = cos(ang)*max_mod_v_ref;
+			VDQ.q=0;
+			
+			if (-VDQ_ant.d > -const_VDQ_d+sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref) ) VDQ.d= -(-const_VDQ_d+sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref));
+			else if (VDQ_ant.d > -const_VDQ_d+sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref) )VDQ.d = -const_VDQ_d+sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref);
+			else VDQ.d=VDQ_ant.d;
+			
+			VDQ.d+=const_VDQ_d;
+			VDQ.q+=const_VDQ_q;
+			
+			v=InvPark((RotorFluxAngle_),VDQ);
+			if ( (sqrt(v.beta*v.beta+v.alpha*v.alpha)) > (max_mod_v_ref) )//TODO
+			{	
+				v.beta = sin(ang)*max_mod_v_ref;
+				v.alpha = cos(ang)*max_mod_v_ref;
+			}
 		}
 		
 		if (ang>=0&&ang<(PI/3)){
