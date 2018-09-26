@@ -120,7 +120,7 @@ int main(int argc, char **argv)
 	string line;
 	int i=0;//here
 	bool primeiro=true;
-	
+	int gear=2;
 	enable_raw_mode();
 	
 while (quit==false){
@@ -139,6 +139,8 @@ while (quit==false){
 	tcflush(0, TCIFLUSH);cin>>w_ref;enable_raw_mode();/*fflush(stdin);*/break;
 				case 'l' :cout<<"enter torque load:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
 	tcflush(0, TCIFLUSH);cin>>load_s;enable_raw_mode();p=false;/*fflush(stdin);*/break; 
+				case 'g' :cout<<"enter gear:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
+	tcflush(0, TCIFLUSH);cin>>gear;if(gear==0)T_G_R =0; if(gear==1)T_G_R = (4.313/* 2.331.436/* 1 0.789*/*4.1/*1.9*/);if(gear==2)T_G_R = (/*4.313*/ 2.33/*1.436 1 0.789*/*4.1/*1.9*/);if(gear==3)T_G_R = (/*4.313 2.33*/1.436/* 1 0.789*/*4.1/*1.9*/);if(gear==4)T_G_R = (/*4.313 2.33 1.436*/ 1 /*0.789*/*4.1/*1.9*/);enable_raw_mode();/*fflush(stdin);*/break; 
 				case 'a' :cout<<"enter prop. gain speed:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
 	tcflush(0, TCIFLUSH);cin>>vel_p;enable_raw_mode();/*fflush(stdin);*/break;
 				case 'b' :cout<<"enter int. gain speed:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
