@@ -36,6 +36,7 @@ class RotFluxAng
 	double RotFluxAng_/*CalcSlipAngle*/(double iqs, double ids, double sPWM, double tRotor, double Omega_r);
 	double	get_imr();
 	double get_rfa();
+	void reset();
 double get_wm();
 
 

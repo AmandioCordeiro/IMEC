@@ -53,15 +53,23 @@
 	OmegaSlip[0] = 0;
 	ThetaSlip[0] = 0;
 }*/
-RotFluxAng::RotFluxAng(float rfa)//TODO necess rfa?? para invocar construc? NEW
+RotFluxAng::RotFluxAng(float imr)//TODO necess rfa?? para invocar construc? NEW
 {
 	//  Initialisation of slip frequency and angle
 	OmegaSlip = 0.0;
-	rot_f_ang= rfa;
+	rot_f_ang= 0.0000000000001;
 	theta_r=0.0;
 	theta_slip=0.0;
-	imr=0.0000000000001;//TODO(remove)nao sera necessario se nao voltage compensator
-	wm=0.000000000000001;
+	imr=0.0;//TODO(remove)nao sera necessario se nao voltage compensator
+	wm=0.0000000000000001;
+};
+void RotFluxAng::reset(){
+	OmegaSlip = 0.0;
+	rot_f_ang= 0.0000000000001;
+	theta_r=0.0;
+	theta_slip=0.0;
+	//imr=0.0;//TODO(remove)nao sera necessario se nao voltage compensator
+	wm=0.0000000000000001;
 };
 double RotFluxAng::/*CalcSlipAngle*/RotFluxAng_(double iqs, double ids, double sPWM, double tRotor,double Omega_r)//added Omega_r
 {

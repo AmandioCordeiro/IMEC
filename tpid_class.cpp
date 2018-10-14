@@ -127,7 +127,7 @@ float _pid::calc_pid()
   this->current_err_ = this->this_setpoint_ - this->process_point_;
     
   // derive current loops error rate
-////  d = this->current_err_ - this->last_err_;
+//  d = this->current_err_ - this->last_err_;
 	
   // increment the integral by the error amount
   if ( this->i_ > this->minimum_pid_ && this->i_ < this->maximum_pid_ ){//TODO

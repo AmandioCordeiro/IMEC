@@ -18,12 +18,14 @@
 //#include <thread>
 #include <string>
 #include <fstream>
+#include <iomanip>
 //#include <gtkmm.h>
 //#include <gtkmm/application.h>
 
 //#include <gtkmm/button.h>
 using namespace std;
 using namespace Maths;
+#define FIXED_FLOAT(x) std::fixed <<std::setprecision(4)<<(x)
 #define np /*3*/2//3//2//TODO:insert number pole pairs
 #define Trrr 0.252308//TODO: insert (Lr/Rr)//0.17703
 //#define per 0.0001  /////// especificar periodo de amostragem dede  filter_num_dif
@@ -58,7 +60,7 @@ extern tTwoPhase v_;
 extern double velocidade;
 //extern double VDQ_alpha_esc,VDQ_beta_esc;
 extern double T;
-#define Idn 101//alterei101.0com 105->154 de binario max//129.0//155.0//160.0//150.0//22kw:17.0//15.0//30//TODO
+#define Idn 99.0//99//alterei101.0com 105->154 de binario max//129.0//155.0//160.0//150.0//22kw:17.0//15.0//30//TODO
 #define Idmin (71.0)//alterei72 78.75//67.0//80.0//66.0//22kw:12.0//TODO
 #define Imax 400.0//meus igbt so sao de 300, 400 é o valor de parametros do relatorio 1pv5135//22kw:200//95//43//TODO
 /*#define*/extern double Tm1;//
@@ -72,7 +74,8 @@ extern double vaa,vbb,vcc;
 #define vel_d 0//?
 //#define vel_Min_pid_res -900.0//600 //-300.0//-170.0				//Min value PI out
 //#define vel_Max_pid_res 900.0//600 //300//170.0//360//44//?		//Max value PI out
-#define vel_cel 0.04//0.004//8//24//50//(3*4)//(4)//?8					//max aceleration at setpoint
+/*#define*/extern double vel_cel; //0.04//0.004//8//24//50//(3*4)//(4)//?8					//max aceleration at setpoint
+#define ACCEL 7.7 
 
 /*#define*/extern double torque_control_p;// /*0.000001*/10//3.6//3.6//not added (*2) after introduced the currrent controller/*(4.0*0.7)*///6.0//0.2//1.0//0.6//6//3//(1.0*0.4)//(40*0.19)//0.6///1?
 /*#define*/extern double torque_control_i;// /*0.05*/0.008//0.004//(0.0006*1.2)//0.0006//6.0//0.0006//7.0//0.0000625//(0.000625*0.7/*1.2*/)
@@ -90,12 +93,12 @@ extern double iaa_p,vaa_p,cos_phi,two_phi,desc_p;
 #define current_control_y_cel	300.0// 3000//?
 
 
-#define current_control_x_p /*0.000001*//*imr 0.8 0.75*/0.6//0.8 1.8 IDQ.d//alterei 1.9//1.92//1.9//2//(0.4)//1//11.0//(6.23*1.11)//0.4//1//0.3//100//5.0//110//5//10//20.0//10//(7)//0.7//10//? 13marco
-#define current_control_x_i /*0.2*//*imr 0.00001*/0.0001//0.00001 IDQ.d//0.001alterei//0.00001//(0.0006*0.2)//(0.098)//4.5//0.006//7.0//(0.00006)//0.000625//?
+/*#define*/extern double current_control_x_p; /////*0.000001*//*imr 0.8 0.75*/0.6//0.8 1.8 IDQ.d//alterei 1.9//1.92//1.9//2//(0.4)//1//11.0//(6.23*1.11)//0.4//1//0.3//100//5.0//110//5//10//20.0//10//(7)//0.7//10//? 13marco
+/*#define*/extern double current_control_x_i; /////*0.2*//*imr 0.00001*/0.00001//0.00001 IDQ.d//0.001alterei//0.00001//(0.0006*0.2)//(0.098)//4.5//0.006//7.0//(0.00006)//0.000625//?
 #define current_control_x_d 0.0//?
 //float current_control_x_Min_pid_res = -2/3*VDC;// (-400)//100?
 //float current_control_x_Max_pid_res = 2/3*VDC;//400//100?
-#define current_control_x_cel	0.06//0.06 IDQ.d alterei isto//0.002//.001//?3000
+#define current_control_x_cel	0.05//0.06 IDQ.d alterei isto//0.002//.001//?3000
 
 ofstream fTorque ("torque.txt");
 ofstream fVel ("speed.txt");
@@ -113,7 +116,7 @@ protected:
 	tThreePhase abc_current;
 	RotFluxAng angle;
 	double RotorFluxAngle;	
-private:
+
 	double ids,iqs,idr,iqr;
 	//double B_[3][3],C[3][3];
 	//double D,Bs,Br,Bm;
@@ -150,9 +153,10 @@ double Rr;
 
 	double Rs;
 	//double get_Rs();
-protected:
-	double wr;
+	virtual void clutch(void)=0;
 
+	double wr;
+private:
 
 };
 
@@ -198,6 +202,7 @@ public:
 	//get_VDQ +++++++++++++++++++++++++++
 	tTwoPhase get_V(/*const*/ );
 	void decouple();
+	void clutch();
 private:
 
 	_pid vel; 
