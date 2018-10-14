@@ -35,28 +35,30 @@ using namespace Maths;
 #define vel_d 0
 //#define vel_Min_pid_res -300.0//?		//Min value PI out
 //#define vel_Max_pid_res 300.0//?		//Max value PI out
-#define vel_cel 0.04//?					//max aceleration at setpoint
+//#define ACCEL 7.7 //7.7km/h per sec
+#define vel_cel 0.01//?					//max aceleration at setpoint
 
-#define torque_control_p 3.6// ?
-#define torque_control_i 0.01// ?
+#define torque_control_p 0.33//3.6// ?
+#define torque_control_i 0.000008//0.01// ?
 #define torque_control_d 0.0/
-#define torque_control_Min_pid_res (-200)//?
-#define torque_control_Max_pid_res 200//?
-#define torque_control_cel 400.0//?
+#define torque_control_Min_pid_res (-175)//?
+#define torque_control_Max_pid_res 175//?
+#define torque_control_cel 0.4//400.0//?
 
-#define current_control_x_p /*0.000001*/1.9//? 
-#define current_control_x_i /*0.2*/0.001//?
+#define current_control_x_p 0.54//1.9//? 
+#define current_control_x_i 0.00001//0.001//?
 #define current_control_x_d 0.0
 #define current_control_x_Min_pid_res = -400;// ? 
 #define current_control_x_Max_pid_res = 400;//?
-#define current_control_x_cel	0.04//?
+#define current_control_x_cel	0.05//0.04//?
 
 #define np 2//? number pair poles
 #define M 0.001500//? mutual inductance
 #define Ls (0.000140+M)//? Lls+M
 #define Llr 0.000140//?
 #define Lr (Llr+M)
-#define Idn 101.0//?
+#define Idn 99.0//101.0//?
+#define Idmin (71.0)
 #define Tr 0.252308//? (Lr/Rr)
 #define Rs 0.012//?
 #define Rm 650.0//? represent eddy currents. TODO don't know this value
@@ -126,6 +128,51 @@ float dy_nt_(float /*&*/y1, float /*&*/y_1){//y1 significa y[n+1]
 float d2y_nt_(float /*&*/y1, float /*&*/y,float /*&*/y_1){//derived can only be obtained  when n>=? 
 	return ((y1-2*y+y_1)/(T*T));}
 
+float max_mod_v_ref=0.0;
+float ang=0.0;
+void calc_max_mod_v_ref(tTwoPhase v_bi){
+ang=atan2(v_bi.beta,v_bi.alpha);
+
+	//cout<<"angulo"<<ang<<endl;
+	T1T2<<"angulo: "<<ang<<endl;
+
+	double ang_u = 0.0;
+	//if (ang>=0&&ang<(PI/6))
+	//	ang_u = ang - PI/6;//gives negative
+	//else if (ang>=PI/6 && ang<(PI/3))
+	//		ang_u = ang - PI/6;//gives positive
+	if (ang>=0&&ang<(PI/3))
+		ang_u = ang - PI/6;//cos positive number == cos negative number
+	
+	else if (ang>=PI/3 && ang<(2*PI/3))
+			ang_u = ang - PI/2 ;
+	//else if (ang>=PI/2 && ang<(2*PI/3))
+		//	ang_u = ang - PI/2;
+	
+	else if (ang>=2*PI/3 && ang<(PI))
+		//	ang_u = 5*PI/6 - ang;
+	//else if (ang>= 5*PI/6 && ang<PI)
+			ang_u = ang - 5*PI/6;
+	
+	
+	else if (ang>=-PI && ang<(-2*PI/3))
+			//ang_u = ang + 5*PI/6;//gives neg
+	//else if (ang>= -5*PI/6 && ang<-2*PI/3)
+			ang_u = ang + 5*PI/6;//gives positive	 	
+	////////////
+	else if (ang>=-2*PI/3 && ang<(-PI/3))
+			//ang_u = 3*PI/2 - ang;
+	//else if (ang>= 3*PI/2 && ang<5*PI/3)
+			ang_u = ang + PI/2;
+		
+	else //if (ang>=5*PI/3 && ang<(11*PI/6))
+			//ang_u = 11*PI/6 - ang;
+	//else /*if (ang>= 11*PI/3 && ang<0)*/
+			ang_u = ang + PI/6;
+					
+	max_mod_v_ref = VDC/(cos(ang_u)*CONST_SQRT3_);//TODO uncoment in the end cos for max 
+};
+
 FOC::FOC():VDQ_ant(0.0),const_VDQ_d(0.0),const_VDQ_q(0.0),RotorFluxAngle(0.0),angle(0.0),abc_current(0.0,0.0,0.0),vel_Min_pid_res(-300),vel_Max_pid_res(300),IDQ(0.0,0.0),VDQ(0.0,0.0),IDQ_d_1(0.0),IDQ_d_(0.0),IDQ_d1(0.0),IDQ_d_p(0.0),IDQ_d_pp(0.0),IDQ_q_1(0.0),IDQ_q_(0.0),IDQ_q1(0.0),IDQ_q_p(0.0),IDQ_q_pp(0.0),wmr_(0.0),wmr1(0.0),wmr_p(0.0),v(0.0,0.0),vaa(0.0),vbb(0.0),vcc(0.0),Tr_calc(Tr),VDQ_rtc(0.0,0.0){};
 
 FOC::~FOC(){};
@@ -178,7 +225,7 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 			int sinal_=1;
 			
 			//to get Rotor flux angle:
-			RotorFluxAngle=angle.RotFluxAng_(IDQ.q,IDQ.d,T,Tr_calc,wr*np);	//TODO IDQ.d works or need convert to float	
+			RotorFluxAngle=angle.RotFluxAng_(IDQ.q,IDQ.d,T,Tr_calc,wr*np);	//TODO T_lag or Tpwm?	
 			//RotorFluxAngle=RotorFluxAngle;//TODO:-PI/2 remove? in simulation doesn't work but in real i think it's needed??
 			
 		//PIDs------------------------------------------- To get Voltage direct and quadracture before decoupling: 
@@ -282,61 +329,140 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 
   //SVPWM:---------------
 	{// v tTwoPhase- bifasico, tendo como referencia o estator	
-		float ang=atan2(v.beta,v.alpha);
-		float ang_u = 0.0;
-		//if (ang>=0&&ang<(PI/6))
-		//	ang_u = ang - PI/6;//gives negative
-		//else if (ang>=PI/6 && ang<(PI/3))
-		//		ang_u = ang - PI/6;//gives positive
-		if (ang>=0&&ang<(PI/3))
-			ang_u = ang - PI/6;//cos positive number == cos negative number
 		
-		else if (ang>=PI/3 && ang<(2*PI/3))
-				ang_u = ang - PI/2 ;
-		//else if (ang>=PI/2 && ang<(2*PI/3))
-			//	ang_u = ang - PI/2;
+	calc_max_mod_v_ref(v);
+	if ( ((VDQ.d*VDQ.d+VDQ.q*VDQ.q)) > max_mod_v_ref*max_mod_v_ref ){
 		
-		else if (ang>=2*PI/3 && ang<(PI))
-			//	ang_u = 5*PI/6 - ang;
-		//else if (ang>= 5*PI/6 && ang<PI)
-				ang_u = ang - 5*PI/6;
-			
-		else if (ang>=-PI && ang<(-2*PI/3))
-				//ang_u = ang + 5*PI/6;//gives neg
-		//else if (ang>= -5*PI/6 && ang<-2*PI/3)
-				ang_u = ang + 5*PI/6;//gives positive	 	
-		////////////
-		else if (ang>=-2*PI/3 && ang<(-PI/3))
-				//ang_u = 3*PI/2 - ang;
-		//else if (ang>= 3*PI/2 && ang<5*PI/3)
-				ang_u = ang + PI/2;
-			
-		else //if (ang>=5*PI/3 && ang<(11*PI/6))
-				//ang_u = 11*PI/6 - ang;
-		//else /*if (ang>= 11*PI/3 && ang<0)*/
-				ang_u = ang + PI/6;
-		
-		//to limit value voltage:						
-		float max_mod_v_ref = VDC/(cos(ang_u)*CONST_SQRT3_);//
-		if ( ( sqrt(v.beta*v.beta + v.alpha*v.alpha)) > max_mod_v_ref )
-		{
-			VDQ.q=0;
-			
-			if (-VDQ_ant.d > -const_VDQ_d+sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref) ) VDQ.d= -(-const_VDQ_d+sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref));
-			else if (VDQ_ant.d > -const_VDQ_d+sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref) )VDQ.d = -const_VDQ_d+sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref);
-			else VDQ.d=VDQ_ant.d;
-			
-			VDQ.d+=const_VDQ_d;
-			VDQ.q+=const_VDQ_q;
-			
-			v=InvPark((RotorFluxAngle_),VDQ);
-			if ( (sqrt(v.beta*v.beta+v.alpha*v.alpha)) > (max_mod_v_ref) )//TODO
-			{	
-				v.beta = sin(ang)*max_mod_v_ref;
-				v.alpha = cos(ang)*max_mod_v_ref;
+		 if (max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d > 0){
+			float VDQq_tempp;
+			if (    -VDQ_ant.q > -const_VDQ_q+sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d)) VDQq_tempp= -(-const_VDQ_q+sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d));
+			else if (VDQ_ant.q > -const_VDQ_q+sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d)) VDQq_tempp=  (-const_VDQ_q+sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d));
+			else VDQq_tempp=VDQ_ant.q;
+					
+			float VDQq_tempp_dec=VDQq_tempp+const_VDQ_q;
+			float VDQq_temp;
+			if (((VDQq_tempp_dec*VDQq_tempp_dec)+VDQ.d*VDQ.d>max_mod_v_ref*max_mod_v_ref*1.05)){
+				
+				if (    -VDQ_ant.q > -const_VDQ_q-sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d)) VDQq_temp= -(-const_VDQ_q-sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d));
+				else if (VDQ_ant.q > -const_VDQ_q-sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d)) VDQq_temp=  (-const_VDQ_q-sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d));
+				else VDQq_temp=VDQ_ant.q;
 			}
+			float VDQq_temp_dec=VDQq_temp+const_VDQ_q;
+			if ((VDQq_temp_dec*VDQq_temp_dec+VDQ.d*VDQ.d/*<max_mod_v_ref*max_mod_v_ref*/)<(VDQq_tempp_dec*VDQq_tempp_dec+VDQ.d*VDQ.d/*<max_mod_v_ref*max_mod_v_ref*/))
+				{VDQ.q=VDQq_temp;}
+			else{VDQ.q=VDQq_tempp;}
+		
+			VDQ_ant.q=VDQ.q;
+			VDQ.q+=const_VDQ_q;
 		}
 		
+		calc_max_mod_v_ref(InvPark((RotorFluxAngle_),VDQ));
+		if (max_mod_v_ref*max_mod_v_ref-VDQ.q*VDQ.q > 0){	
+			float VDQd_tempp;
+			if (((VDQ.d*VDQ.d+VDQ.q*VDQ.q)) > max_mod_v_ref*max_mod_v_ref ){
+				
+				if (    -VDQ_ant.d > -const_VDQ_d+sqrt(-VDQ.q*VDQ.q+max_mod_v_ref*max_mod_v_ref) )VDQd_tempp = -(-const_VDQ_d+sqrt(-VDQ.q*VDQ.q+max_mod_v_ref*max_mod_v_ref));
+				else if (VDQ_ant.d > -const_VDQ_d+sqrt(-VDQ.q*VDQ.q+max_mod_v_ref*max_mod_v_ref) )VDQd_tempp =   -const_VDQ_d+sqrt(-VDQ.q*VDQ.q+max_mod_v_ref*max_mod_v_ref);
+				else VDQd_tempp=VDQ_ant.d;
+			}
+			float VDQd_tempp_dec=VDQd_tempp+const_VDQ_d;
+			float VDQd_temp;
+			if ((VDQd_tempp_dec*VDQd_tempp_dec+VDQ.q*VDQ.q>max_mod_v_ref*max_mod_v_ref*1.05)){
+				
+				if (    -VDQ_ant.d > -const_VDQ_d-sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.q*VDQ.q)) VDQd_temp= -(-const_VDQ_d-sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.q*VDQ.q));
+				else if (VDQ_ant.d > -const_VDQ_d-sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.q*VDQ.q)) VDQd_temp=  (-const_VDQ_d-sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.q*VDQ.q));
+				else VDQd_temp=VDQ_ant.d;
+			}
+			float VDQd_temp_dec=VDQd_temp+const_VDQ_d;	
+			if ((VDQd_temp_dec*VDQd_temp_dec+VDQ.q*VDQ.q/*<max_mod_v_ref*max_mod_v_ref*/)<(VDQ.q*VDQ.q+VDQd_tempp_dec*VDQd_tempp_dec/*<max_mod_v_ref*max_mod_v_ref*/))
+				{VDQ.d=VDQd_temp;}
+			else{VDQ.d=VDQd_tempp;}
+			
+			VDQ_ant.d=VDQ.d;
+			VDQ.d+=const_VDQ_d;
+		}
+		
+		do{	
+				VDQ.d=VDQ_ant.d+const_VDQ_d;
+				VDQ.q=VDQ_ant.q+const_VDQ_q;
+					
+				VDQ_ant.q=VDQ_ant.q*0.5;
+				calc_max_mod_v_ref(InvPark((RotorFluxAngle_),VDQ));
+		}while ( ((VDQ.d*VDQ.d+VDQ.q*VDQ.q)) > max_mod_v_ref*max_mod_v_ref && ((((VDQ_ant.q >0 && const_VDQ_q>0) && ((VDQ.q-const_VDQ_q)-VDQ_ant.q>0.3))||(VDQ_ant.q<0 && const_VDQ_q<0 && ((VDQ.q-const_VDQ_q)-VDQ_ant.q<-0.3)))&&(!((VDQ.q>0&&VDQ_ant.q<0)||(VDQ_ant.q>0&&VDQ.q<0))/*&&(VDQ_ant.q+const_VDQ_q>0.3)*/)))
+		;//TODO
+		do{	
+				
+				VDQ.d=VDQ_ant.d+const_VDQ_d;
+				VDQ.q=VDQ_ant.q+const_VDQ_q;
+				VDQ_ant.d=VDQ_ant.d*0.64/*IDQ.d: 0.94imr: 0.96*/;
+				calc_max_mod_v_ref(InvPark((RotorFluxAngle_),VDQ));
+				
+		}while ( ((VDQ.d*VDQ.d+VDQ.q*VDQ.q)) > max_mod_v_ref*max_mod_v_ref && ((((VDQ_ant.d >0 && const_VDQ_d>0) && ((VDQ.d-const_VDQ_d)-VDQ_ant.d>0.3))||(VDQ_ant.d<0 && const_VDQ_d<0 && ((VDQ.d-const_VDQ_d)-VDQ_ant.d<-0.3)))&&(!((VDQ.d>0&&VDQ_ant.d<0)||(VDQ_ant.d>0&&VDQ.d<0))/*&&(VDQ_ant.d+const_VDQ_d>0.3)*/)))
+		;//TODO
+		
+		v=InvPark((RotorFluxAngle_),VDQ);
+		calc_max_mod_v_ref(InvPark((RotorFluxAngle_),VDQ));
+		if ( /*((VDQ.d*VDQ.d+VDQ.q*VDQ.q)) > max_mod_v_ref*max_mod_v_ref*/(/*sqrt*/(v.beta*v.beta+v.alpha*v.alpha)) > max_mod_v_ref*max_mod_v_ref ){
+			v.beta = sin(ang)*max_mod_v_ref;
+			v.alpha = cos(ang)*max_mod_v_ref;
+		}
+	}
+	{
+	//	float ang=atan2(v.beta,v.alpha);
+	//	float ang_u = 0.0;
+	//	//if (ang>=0&&ang<(PI/6))
+	//	//	ang_u = ang - PI/6;//gives negative
+	//	//else if (ang>=PI/6 && ang<(PI/3))
+	//	//		ang_u = ang - PI/6;//gives positive
+	//	if (ang>=0&&ang<(PI/3))
+	//		ang_u = ang - PI/6;//cos positive number == cos negative number
+	//	
+	//	else if (ang>=PI/3 && ang<(2*PI/3))
+	//			ang_u = ang - PI/2 ;
+	//	//else if (ang>=PI/2 && ang<(2*PI/3))
+	//		//	ang_u = ang - PI/2;
+	//	
+	//	else if (ang>=2*PI/3 && ang<(PI))
+	//		//	ang_u = 5*PI/6 - ang;
+	//	//else if (ang>= 5*PI/6 && ang<PI)
+	//			ang_u = ang - 5*PI/6;
+	//		
+	//	else if (ang>=-PI && ang<(-2*PI/3))
+	//			//ang_u = ang + 5*PI/6;//gives neg
+	//	//else if (ang>= -5*PI/6 && ang<-2*PI/3)
+	//			ang_u = ang + 5*PI/6;//gives positive	 	
+	//	////////////
+	//	else if (ang>=-2*PI/3 && ang<(-PI/3))
+	//			//ang_u = 3*PI/2 - ang;
+	//	//else if (ang>= 3*PI/2 && ang<5*PI/3)
+	//			ang_u = ang + PI/2;
+	//		
+	//	else //if (ang>=5*PI/3 && ang<(11*PI/6))
+	//			//ang_u = 11*PI/6 - ang;
+	//	//else /*if (ang>= 11*PI/3 && ang<0)*/
+	//			ang_u = ang + PI/6;
+	//	
+	//	//to limit value voltage:						
+	//	float max_mod_v_ref = VDC/(cos(ang_u)*CONST_SQRT3_);//
+	//	if ( ( sqrt(v.beta*v.beta + v.alpha*v.alpha)) > max_mod_v_ref )
+	//	{
+	//		VDQ.q=0;
+	//		
+	//		if (-VDQ_ant.d > -const_VDQ_d+sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref) ) VDQ.d= -(-const_VDQ_d+sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref));
+	//		else if (VDQ_ant.d > -const_VDQ_d+sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref) )VDQ.d = -const_VDQ_d+sqrt(-const_VDQ_q*const_VDQ_q+max_mod_v_ref*max_mod_v_ref);
+	//		else VDQ.d=VDQ_ant.d;
+	//		
+	//		VDQ.d+=const_VDQ_d;
+	//		VDQ.q+=const_VDQ_q;
+	//		
+	//		v=InvPark((RotorFluxAngle_),VDQ);
+	//		if ( (sqrt(v.beta*v.beta+v.alpha*v.alpha)) > (max_mod_v_ref) )//TODO
+	//		{	
+	//			v.beta = sin(ang)*max_mod_v_ref;
+	//			v.alpha = cos(ang)*max_mod_v_ref;
+	//		}
+	//	}
+	}	
 		if (ang>=0&&ang<(PI/3)){
 				T1=3.0/2.0*T/VDC*(v.alpha-v.beta/CONST_SQRT3_);
 				a1=1;b1=0;c1=0;	//ozz 
@@ -402,17 +528,18 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
   //------
    	
 	//--------------Rotor Time Constant value adjust:			
-			if (n>10000 ) {// TODO				
+			if (n_rtc<90000)n_rtc++;
+			if (n_rtc>70000 ) {// TODO				
 				float error = VDQ_rtc.d-(Rs*IDQ.d-angle.get_wm()*((Ls*Lr-M*M)/Lr)*IDQ.q);
 				
 				//the following is because it dont work at 0 power 0 speed: 
-				if ((IDQ.q<-/*10:maybe more secure 11.5*/10.5 && wr<-/*30*/4 ) || (IDQ.q>10.5 && wr >4) ){
+				if ((IDQ.q<-10.5*3 && wr<-/*30*/4 ) || (IDQ.q>10.5*3 && wr >4) ){
 				  sinal_=1;}
-				else if((IDQ.q>10.5 && wr<-4) || (IDQ.q<-10.5 && wr >4 )){
+				else if((IDQ.q>10.5*3 && wr<-4) || (IDQ.q<-10.5*3 && wr >4 )){
 						sinal_=-1;} 
 						else{ sinal_=0;}
 						
-				Tr_calc=(Tr_calc + sinal_*error*0.000004/*0.000025*//*pi_contr*/);//TODO tune numeric value to rate of change Rr
+				Tr_calc=(Tr_calc + sinal_*error*0.000002/*0.000025*//*pi_contr*/);//TODO tune numeric value to rate of change Rr
 				} 
 	//--------------			
 				

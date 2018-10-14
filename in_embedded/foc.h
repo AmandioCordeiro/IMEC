@@ -46,6 +46,7 @@ class FOC
 	  float RotorFluxAngle;
 	  float VDQ_rtc;
 	  float const_VDQ_d, const_VDQ_q,VDQ_ant;
+	  int n_rtc=0;
    protected:
    private:
 	RotFluxAng angle;
