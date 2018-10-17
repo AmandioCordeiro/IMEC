@@ -240,10 +240,12 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 			torque_control.set_process_point(IDQ.q*Kt*angle.get_imr());
 			float Wn = Vmax/(Ls*sqrt(Idn*Idn+ro*ro*(Imax*Imax-Idn*Idn)));
 			float Wc = Vmax/(Imax*Ls)*sqrt((ro*ro+1.0)/(2.0*ro*ro));//TODO acrescentar 0.9??
+			float Tm;
 			if(Wm < Wn) 
 				{
 				//max torque limit region:
 				if (n*T<0.135) Tm1=LOAD_1_sec;else Tm1=TM1;//TODO remove T in the final and calc, in real maybe this is limited by batteries//TODO maybe limite set speed 
+					 Tm=Tm1;
 					 vel.act_min_max(-Tm1,Tm1);
 					 vel.calc_pid();		
 		
@@ -256,6 +258,7 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 			else {if (Wm < Wc ){
 					//max current(power) limit region:
 					float Tm2=Kt*sqrt(pow(Vmax/(Wm*Ls),2.0)-Imax*Imax*ro*ro)*sqrt(Imax*Imax-pow(Vmax/(Wm*Ls),2.0))/(1.0-ro*ro);
+					Tm=Tm2;
 					vel.act_min_max(-Tm2,Tm2);
 					vel.calc_pid();		
 					
@@ -268,6 +271,7 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 				else {
 					//max Power-speed(voltage) limit region:
 					float Tm3=Kt*(pow((Vmax/(Wm*Ls)),2.0)/(2.0*ro));
+					Tm=Tm3;
 					vel.act_min_max(-Tm3,Tm3);
 					vel.calc_pid();		
 					
@@ -288,7 +292,13 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 			current_control_x.calc_pid();
 		
 			VDQ.d=current_control_x.get_pid_result();//because tension is not proporcional of currents, used in controll as currents but after decoupling, tension because is a Voltage source inverter 											   
-			VDQ.q=torque_control.get_pid_result();				
+			//VDQ.q=torque_control.get_pid_result();				
+			
+			float iqmax=Tm/Kt/angle.get_imr()*0.95/*cag*/;
+			if (torque_control.get_pid_result()>0 && torque_control.get_pid_result()>iqmax)VDQ.q=iqmax;
+			else if (torque_control.get_pid_result()<0 && torque_control.get_pid_result()<-iqmax)VDQ.q=-iqmax;
+			else
+				VDQ.q=torque_control.get_pid_result();
 			/*here*/
 			VDQ_ant=VDQ;
 		}

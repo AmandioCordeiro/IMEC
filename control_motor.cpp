@@ -864,10 +864,10 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 			//VDQ.q=current_control_y.get_pid_result(); //							
 			//double VDQq_p=VDQ.q;
 			
-			//float iqmax=Tm/Kt/angle.get_imr()*0.9/*cag*/;
-			//if (torque_control.get_pid_result()>0 && torque_control.get_pid_result()>iqmax)VDQ.q=iqmax;
-			//else if (torque_control.get_pid_result()<0 && torque_control.get_pid_result()<-iqmax)VDQ.q=-iqmax;
-			//else
+			float iqmax=Tm/Kt/angle.get_imr()*0.95/*cag*/;
+			if (torque_control.get_pid_result()>0 && torque_control.get_pid_result()>iqmax)VDQ.q=iqmax;
+			else if (torque_control.get_pid_result()<0 && torque_control.get_pid_result()<-iqmax)VDQ.q=-iqmax;
+			else
 				VDQ.q=torque_control.get_pid_result();			
 			VDQ_ant=VDQ;
 //--------------Rotor Time Constant value adjust:			
