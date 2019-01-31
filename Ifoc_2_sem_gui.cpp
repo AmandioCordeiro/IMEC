@@ -160,7 +160,7 @@ while (quit==false){
 				//case 'k' :load--;/*flag=false;*/break;
 				//case 'p' :load++;/*flag=false;*/break;
 				//case 't' :cout<<"set by torque load ";p=false;break;
-				case 'v' :cout<<"set by vehicle load,enter road gradiente: ";p=true;e=false;/*break;*///inicial p=true
+				case 'v' :cout<<"set by vehicle load,enter road gradiente(ex. 0.0 <-> 0.2): ";p=true;e=false;/*break;*///inicial p=true
 				/*case 'm' :cout<<"enter road gradiente";*/disable_raw_mode();
 	tcflush(0, TCIFLUSH);cin>>gradiente;enable_raw_mode();/*fflush(stdin);*/break;
 				//case 'h' :cout<<"enter power load:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
@@ -169,7 +169,7 @@ while (quit==false){
 				case 'i' :pl++;/*flag=false;*/break;
 				//case 'e' : e=true;break;//set by driving_cycle
 				
-				default:cout<<"invalid operator, \ns(commanded speed)"<<" \na (enter prop. gain speed)"<<" \nb (enter int. gain speed)"<<"\nc (enter prop. gain torq_controll)"<<"\nd (enter int. gain torq_controll)"<<" \nl(load), "<</*\nt(set by torque load), */"\nv(set by vehicle load), \n+(increment speed), \n-(decrement speed)"<</*, k(decrement load),p(increment load),*/", \nr(run), \nq(quit)"<<endl;	
+				default:cout<<"invalid operator, \ns(commanded speed)"<<" \na (enter prop. gain speed)"<<" \nb (enter int. gain speed)"<<"\nc (enter prop. gain torq_controll)"<<"\nd (enter int. gain torq_controll)"<<" \nl(load), "<</*\nt(set by torque load), */"\nv(set by vehicle load), \n+(increment speed), \n-(decrement speed) \ng (switch gear)"<</*, k(decrement load),p(increment load),*/", \nr(run), \nq(quit)"<<endl;	
 			}
 		
 		}
@@ -198,8 +198,8 @@ while (quit==false){
 			control.torque_control_tune_pid();
 			
 			T1T2<<FIXED_FLOAT(control.get_n()*T)<<" sec. "<<endl;
-			fwref<<FIXED_FLOAT(control.get_n()*T)<<"sec. ref. velocity: "<<w_ref<<endl;
-			fload<<FIXED_FLOAT(control.get_n()*T)<<"sec. Torque load(ref.): "<<control.get_torq_L()<<endl;
+			fwref<<FIXED_FLOAT(control.get_n()*T)<<"sec.; motor rotor reference velocity: "<<w_ref<<endl;
+			fload<<FIXED_FLOAT(control.get_n()*T)<<"sec.; Torque load: "<<control.get_torq_L()<<endl;
 			//fim_ciclo=false;
 			
 						
@@ -207,7 +207,7 @@ while (quit==false){
 			if (i<4 && e==true && driving_cycle.is_open())
 			{				
 						if (primeiro){getline(driving_cycle,line);primeiro=false;}
-						fVel<<"  line   "<<line<<endl;
+						fVel<<"  line "<<line<<"reference velocity (km/h)"<<endl;
 						while(line.length() > 13 )getline(driving_cycle,line);	
 						
 						// char szOrbits[] = "365.24 29.53";
@@ -257,7 +257,7 @@ while (quit==false){
 					getline(driving_cycle,line);
 					primeiro=false;
 					}
-				fVel<<"  line   "<<line<<endl;
+				fVel<<"  line   "<<line<<"reference velocity (km/h)"<<endl;
 				while(line.length() > 13 )getline(driving_cycle,line);	
 				
 				// char szOrbits[] = "365.24 29.53";
@@ -348,7 +348,7 @@ while (quit==false){
 
 			double ia=control.get_ias();//TODO to measure cos phi
 			//função a seguir com tempo variavel, necessario resolver para tempo const
-			svpwm(control.get_V(),control.get_rot_fl_an(),control);//news gates and times
+			svpwm(control);//news gates and times
 			/*here*/
 			iaa_p=ia;
 			vaa_p=vaa;
@@ -406,18 +406,16 @@ while (quit==false){
 			//vcc=InvClarke(v_).c;
 			
 			//cout<<" vaa:"<<vaa<<" vbb:"<<vbb<<" vcc:"<<vcc<<endl;
-			T1T2<<" vaa_n:"<<vaa<<" vbb_n:"<<vbb<<" vcc_n:"<<vcc<<endl<<"IDC_p: "<<IDC<<endl;
+			T1T2<<" vaa_n:"<<vaa<<" vbb_n:"<<vbb<<" vcc_n:"<<vcc<<endl<<"IDC_previous: "<<IDC<<endl;
 			
 			//menos efficiente com isto!?
 			//if (w_ref==0 && abs(velocidade) < 1)/*T0==T*/{T0=T;vaa=0.0;vbb=0.0;vcc=0.0;}
 			
 			control.get_wr(vaa,vbb,vcc); 
-			velocidade=control.get_wr(); 
-			if (clutch_time<CLUTCH_TIME*1/T && clutch_time>=1)
-				velocidade=w_ref;//fVel<<"clutch_time: "<<clutch_time<<" "<<CLUTCH_TIME*1/T<<" km/h: "<<Vf*R/T_G_R*3.6<<"distance: "<<distance_<<" meters"<<endl;
+			
 			distance_+=velocidade/T_G_R*R*T; 
-			fVel<<FIXED_FLOAT(control.get_n()*T)<<"sec."<< "actual velocity, shaft (rad/s): "<<velocidade<<"T_G_R"<<T_G_R;
-			 fVel<<" km/h: "<<velocidade*R/T_G_R*3.6<<"distance: "<<distance_<<" meters"<<endl;
+			fVel<<FIXED_FLOAT(control.get_n()*T)<<"sec.;"<< " velocity clutch (rad/s): "<<velocidade<<"; T_G_R(total gear ratio): "<<T_G_R;
+			 fVel<<";vehicle speed (km/h): "<<velocidade*R/T_G_R*3.6<<"; distance: "<<distance_<<" meters"<<endl;
 			
 //_____________
 

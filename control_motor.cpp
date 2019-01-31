@@ -8,6 +8,7 @@ double M=0.001500;//0.050382;/*0.51233;*///0.0117//0.069312//mutual inductance
 double Ls=(0.000140+M);//0.051195;/*(0.00845+M);*///0.014//0.07132
 
 double Lr=(0.000140+M);//0.052571;/*(0.00515+M);*///0.014//0.07132
+#define Lps Ls-M*M/Lr
 double J=(0.071);//TODO:?? 1pv5135-4ws14: 0.071
 double ro=(1.0-(M*M)/(Ls*Lr));//0.999863//1-M*M/(Ls*Lr)//alterar nome
 
@@ -19,18 +20,17 @@ double Vmax=VDC/sqrt(3.0);
 
 /*#define*/double Rm=650.0; //TODO, nao funcionou c define nao sei pk, talvez dpois d inserir .0 ja deia, como esta agora
 /*#define*/double Llr=(Lr-M);//0.0021891 //TODO verificar Llr=Lr-M;
-#define CLUTCH_TIME 0.5
+#define CLUTCH_TIME 0.5//0.13//0.5
 int clutch_time=-1;
 double roLs=(ro*Ls);//0.013998//ro*Ls
 
 tTwoPhase v_(0.0,0.0);
-double velocidade=0;
-
-double T = 0.0001;//0.0001-10khz//TODO: PWM periode 0.000125-8khz  
+double velocidade=0;//vel. clutch
+double T = 0.000125;//0.0001-10khz//TODO: PWM periode 0.000125-8khz  
 #define T_lag (0.0000000000000000000001)//0.000000000001*0.02 TODO:?ver tempo de computacao desde que lidos os valores até disparos dos igbts
-double vel_p=20.0;////20.0;//6;//1000;//1;//1//9//1.1//(3)//6.0*0.9//(2/*4.5*/)//TODO: speed controller gain 
+double vel_p=20.0;////20.0;//6;//1000;//1;//1//9/ /1.1//(3)//6.0*0.9//(2/*4.5*/)//TODO: speed controller gain 
 double vel_i=0.0006;//0.00006;//TODO: speed controller integral gain 
-double torque_control_p=0.33/*3.6*0.124*/;//alterei*0.5 TODO: torque controller gain
+double torque_control_p=/*to use current controller 128*//*estava este val em torq_control:0.33,mas experimentei c*/ 1.4;/* e deu bons result.*//*3.6*0.124*/;//alterei*0.5 TODO: torque controller gain
 double torque_control_i=0.000008/*alterei0.0009(0.001) 0.008*/;//TODO: torque controller integral gain
 double current_control_x_p=0.54;//0.5 a experiencia tava 0.6
 double current_control_x_i=0.00001;
@@ -44,7 +44,7 @@ double iaa_p,vaa_p,cos_phi,two_phi=0.0,desc_p=0.0;
 ofstream sfData_va_ia ("Data_va_ia.dat");
 double Tm1;
 
-tTwoPhaseDQ VDQ_ant(0.0,0.0);
+tTwoPhaseDQ VDQ_ant(0.0,0.0);//torque and magnetization current value at exit controllers
 tTwoPhaseDQ VDQ(0.0,0.0);
 double const_VDQ_d=0.0;
 double const_VDQ_q=0.0;
@@ -63,6 +63,15 @@ double vel_cel = 0.04;
 float Tm=0.0;
 
 double torque_clutch=0.0;
+
+double Vds_T_1=0.0;
+double Vds_T=0.0;
+double Vqs_T_1=0.0;
+double Vqs_T=0.0;
+double angle_get_wm_T_1=0.0;
+double angle_get_wm_T=0.0;
+double wr_T_1=0.0;
+double wr_T=0.0;
 
 double dy_nt_(double /*&*/y1, double /*&*/y_1){//y1 significa y[n+1] 
 	return ((y1-y_1)/(2*T));};
@@ -94,7 +103,7 @@ ang=atan2(v_bi.beta,v_bi.alpha);
 	
 	else if (ang>=2*PI/3 && ang<(PI))
 		//	ang_u = 5*PI/6 - ang;
-	//else if (ang>= 5*PI/6 && ang<PI)
+	//else if (ang>= 5*PI/6 && ang<PI))
 			ang_u = ang - 5*PI/6;
 	
 	
@@ -118,133 +127,111 @@ T1T2 << "max_mod_v_ref "<< max_mod_v_ref<<endl;
 };
 
 ////////To implement SVPWM:
-void svpwm(tTwoPhase v,double RotorFluxAngle_,control_loops & control_){//tTwoPhase- bifasico, tendo como referencia o estator
+void svpwm(control_loops & control_){//tTwoPhase- bifasico, tendo como referencia o estator
+	tTwoPhase v=control_.get_V();
+	double RotorFluxAngle_=control_.get_rot_fl_an();
+	T1T2 <<"valpha"<<v.alpha<<"vbeta"<<v.beta<<endl<<"VDQ.q_i:"<<VDQ.q-const_VDQ_q<<endl;
 	calc_max_mod_v_ref(v);
-	//max_mod_v_ref=abs(max_mod_v_ref);//abs para double
-	/*TODONEW *///if ( /*VDQ.q > 0 && */VDQ_ant.q > /*VDC/sqrt(3)*/max_mod_v_ref ) {VDQ_ant.q = /*VDC/sqrt(3)*/max_mod_v_ref;VDQ.q=VDQ_ant.q+const_VDQ_q;}
-	/*TODONEW*/ //else if ( /*VDQ.q < 0 &&*/ VDQ.q < -/*VDC/sqrt(3)*/max_mod_v_ref ) {VDQ_ant.q = -/*VDC/sqrt(3)*/max_mod_v_ref;VDQ.q=VDQ_ant.q+const_VDQ_q;}			
-				//if ( /*VDQ.q > 0 && */VDQ_ant.d > /*VDC/sqrt(3)*/max_mod_v_ref ) {VDQ_ant.d = /*VDC/sqrt(3)*/max_mod_v_ref;VDQ.d=VDQ_ant.d+const_VDQ_d;}
-	/*TODONEW*/ //else if ( /*VDQ.q < 0 &&*/ VDQ.d < -/*VDC/sqrt(3)*/max_mod_v_ref ) {VDQ_ant.d = -/*VDC/sqrt(3)*/max_mod_v_ref;VDQ.d=VDQ_ant.d+const_VDQ_d;}			
-
+	bool none=false;
+	tTwoPhaseDQ VDQ_t(VDQ);
+	
+	//analitico
+	if (0==1 && (VDQ.d*VDQ.d+VDQ.q*VDQ.q) > max_mod_v_ref*max_mod_v_ref ){
+		VDQ.q=(VDQ.d*(sin(RotorFluxAngle_)+CONST_SQRT3_*cos(RotorFluxAngle_))+const_VDQ_q*(cos(RotorFluxAngle_)+CONST_SQRT3_*sin(RotorFluxAngle_))-2.0/CONST_SQRT3_*VDC)/(-cos(RotorFluxAngle_)+CONST_SQRT3_*sin(RotorFluxAngle_));
+		VDQ_t.q=VDQ.q+const_VDQ_q;
+		v=InvPark((RotorFluxAngle_),(VDQ_t));//TODO remove embedded
+		T1T2 <<"try1"<<"VDQ.q"<<VDQ.q<<endl;
+		T1T2<<(-2.0/3.0*VDC/sin(RotorFluxAngle_)+VDQ.d*cos(RotorFluxAngle_)/sin(RotorFluxAngle_)-const_VDQ_q)<<endl<<(-1.0/3.0*VDC/sin(RotorFluxAngle_)+VDQ.d*cos(RotorFluxAngle_)/sin(RotorFluxAngle_)-const_VDQ_q)<<endl<<v.beta<<endl;
+		if (!(-2.0/3.0*VDC/sin(RotorFluxAngle_)+VDQ.d*cos(RotorFluxAngle_)/sin(RotorFluxAngle_)-const_VDQ_q<VDQ.q) 
+			|| !(-1.0/3.0*VDC/sin(RotorFluxAngle_)+VDQ.d*cos(RotorFluxAngle_)/sin(RotorFluxAngle_)-const_VDQ_q>VDQ.q)
+			|| !(v.beta>0))				
+				{VDQ.q=((-VDQ.d*sin(RotorFluxAngle_)/cos(RotorFluxAngle_))-const_VDQ_q+VDC/CONST_SQRT3_/cos(RotorFluxAngle_));	
+				
+				VDQ_t.q=VDQ.q+const_VDQ_q;
+				v=InvPark((RotorFluxAngle_),(VDQ_t));//TODO remove embedded
+				T1T2 <<"try2"<<endl;
+				if (!(1.0/3.0*VDC/sin(RotorFluxAngle_)+VDQ.d*cos(RotorFluxAngle_)/sin(RotorFluxAngle_)-const_VDQ_q>VDQ.q) 
+					|| !(-1.0/3.0*VDC/sin(RotorFluxAngle_)+VDQ.d*cos(RotorFluxAngle_)/sin(RotorFluxAngle_)-const_VDQ_q<VDQ.q)
+					|| !(v.beta>0)){
+						VDQ.q=(VDQ.d*(sin(RotorFluxAngle_)-CONST_SQRT3_*cos(RotorFluxAngle_))+const_VDQ_q*(cos(RotorFluxAngle_)-CONST_SQRT3_*sin(RotorFluxAngle_))-2.0/CONST_SQRT3_*VDC)/(-cos(RotorFluxAngle_)-CONST_SQRT3_*sin(RotorFluxAngle_));
+						VDQ_t.q=VDQ.q+const_VDQ_q;
+						v=InvPark((RotorFluxAngle_),(VDQ_t));//TODO remove embedded
+						T1T2 <<"try3"<<endl;
+									
+					if (!(1.0/3.0*VDC/sin(RotorFluxAngle_)+VDQ.d*cos(RotorFluxAngle_)/sin(RotorFluxAngle_)-const_VDQ_q<VDQ.q) 
+						|| !(2.0/3.0*VDC/sin(RotorFluxAngle_)+VDQ.d*cos(RotorFluxAngle_)/sin(RotorFluxAngle_)-const_VDQ_q>VDQ.q)
+						|| !(v.beta>0)){
+							VDQ.q=(VDQ.d*(sin(RotorFluxAngle_)+CONST_SQRT3_*cos(RotorFluxAngle_))+const_VDQ_q*(cos(RotorFluxAngle_)+CONST_SQRT3_*sin(RotorFluxAngle_))-2.0/CONST_SQRT3_*VDC)/(-cos(RotorFluxAngle_)+CONST_SQRT3_*sin(RotorFluxAngle_));
+							VDQ_t.q=VDQ.q+const_VDQ_q;
+							v=InvPark((RotorFluxAngle_),(VDQ_t));//TODO remove embedded
+							T1T2 <<"try4"<<endl;
+							
+						if (!(1.0/3.0*VDC/sin(RotorFluxAngle_)+VDQ.d*cos(RotorFluxAngle_)/sin(RotorFluxAngle_)-const_VDQ_q<VDQ.q) 
+							|| !(2.0/3.0*VDC/sin(RotorFluxAngle_)+VDQ.d*cos(RotorFluxAngle_)/sin(RotorFluxAngle_)-const_VDQ_q>VDQ.q)
+							|| !(v.beta<0)){
+								VDQ.q=((-VDQ.d*sin(RotorFluxAngle_)/cos(RotorFluxAngle_))-const_VDQ_q-VDC/CONST_SQRT3_/cos(RotorFluxAngle_));
+								VDQ_t.q=VDQ.q+const_VDQ_q;
+								v=InvPark((RotorFluxAngle_),(VDQ_t));//TODO remove embedded
+								T1T2 <<"try5"<<endl;
+								
+								if (!(1.0/3.0*VDC/sin(RotorFluxAngle_)+VDQ.d*cos(RotorFluxAngle_)/sin(RotorFluxAngle_)-const_VDQ_q>VDQ.q) 
+									|| !(-1.0/3.0*VDC/sin(RotorFluxAngle_)+VDQ.d*cos(RotorFluxAngle_)/sin(RotorFluxAngle_)-const_VDQ_q<VDQ.q)
+									|| !(v.beta<0)){
+										VDQ.q=(VDQ.d*(sin(RotorFluxAngle_)-CONST_SQRT3_*cos(RotorFluxAngle_))+const_VDQ_q*(cos(RotorFluxAngle_)-CONST_SQRT3_*sin(RotorFluxAngle_))+2.0/CONST_SQRT3_*VDC)/(-cos(RotorFluxAngle_)-CONST_SQRT3_*sin(RotorFluxAngle_));
+										VDQ_t.q=VDQ.q+const_VDQ_q;
+										v=InvPark((RotorFluxAngle_),(VDQ_t));//TODO remove embedded
+										T1T2 <<"try6"<<endl;
+								
+										if (!(-2.0/3.0*VDC/sin(RotorFluxAngle_)+VDQ.d*cos(RotorFluxAngle_)/sin(RotorFluxAngle_)-const_VDQ_q<VDQ.q) 
+											|| !(-1.0/3.0*VDC/sin(RotorFluxAngle_)+VDQ.d*cos(RotorFluxAngle_)/sin(RotorFluxAngle_)-const_VDQ_q>VDQ.q)
+											|| !(v.beta<0)){
+												none=true;
+												T1T2<<"none found"<<endl;}
+									}
+								}
+							}
+						}
+					}			
+		T1T2<<"VDQ.q:"<<VDQ.q<<" VDQ_ant.q:"<<VDQ_ant.q<<endl;
+		if (none){VDQ.q=VDQ_ant.q+const_VDQ_q;}
+		else VDQ.q+=const_VDQ_q;
+		T1T2<<"VDQ_ant.q+const_VDQ_q"<<VDQ_ant.q+const_VDQ_q<<"VDQ.q"<<VDQ.q<<"VDQ_ant.d+const_VDQ_d"<<VDQ_ant.d+const_VDQ_d<<"VDQ.d"<<VDQ.d<<endl;
+		v=InvPark(RotorFluxAngle_,VDQ);//TODO remove embedded
+		T1T2<<"novo vbeta_alpha "<<v.beta<<" "<<v.alpha<<"rfa"<<RotorFluxAngle_<<endl;										
+		calc_max_mod_v_ref(v);					
+		
+	}
+	if (0==1 && (VDQ.d*VDQ.d+VDQ.q*VDQ.q) > max_mod_v_ref*max_mod_v_ref ){
+		VDQ.q=VDQ_ant.q+const_VDQ_q;
+	
+		calc_max_mod_v_ref(InvPark((RotorFluxAngle_),VDQ));
+		v=InvPark((RotorFluxAngle_),VDQ);//TODO remove embedded
+	}		
 	if (1==1&& ((VDQ.d*VDQ.d+VDQ.q*VDQ.q)) > max_mod_v_ref*max_mod_v_ref ){
-		//if (VDQ_ant.d > max_mod_v_ref)VDQ.d=max_mod_v_ref;
- 		//else if (VDQ_ant.d  < -max_mod_v_ref)VDQ.d = -max_mod_v_ref; else VDQ.d=VDQ_ant.d;
-		 
-		//if ((VDQ.d*VDQ.d+const_VDQ_q*const_VDQ_q) > max_mod_v_ref*max_mod_v_ref && !((VDQ_ant.q+const_VDQ_q>0&&VDQ_ant.q<0)||(VDQ_ant.q>0&&VDQ_ant.q+const_VDQ_q<0))){VDQ_ant.q=0;VDQ.q=const_VDQ_q;} 
-		//else
-		 if (max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d > 0){
-			float VDQq_tempp;
-			if (    -VDQ_ant.q > -const_VDQ_q+sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d)) VDQq_tempp= -(-const_VDQ_q+sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d));
-			else if (VDQ_ant.q > -const_VDQ_q+sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d)) VDQq_tempp=  (-const_VDQ_q+sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d));
-			else VDQq_tempp=VDQ_ant.q;
-					
-			float VDQq_tempp_dec=VDQq_tempp+const_VDQ_q;
-			float VDQq_temp;
-			if (((VDQq_tempp_dec*VDQq_tempp_dec)+VDQ.d*VDQ.d>max_mod_v_ref*max_mod_v_ref*1.05)){
-				
-				if (    -VDQ_ant.q > -const_VDQ_q-sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d)) VDQq_temp= -(-const_VDQ_q-sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d));
-				else if (VDQ_ant.q > -const_VDQ_q-sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d)) VDQq_temp=  (-const_VDQ_q-sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.d*VDQ.d));
-				else VDQq_temp=VDQ_ant.q;
-			}
-			float VDQq_temp_dec=VDQq_temp+const_VDQ_q;
-			if ((VDQq_temp_dec*VDQq_temp_dec+VDQ.d*VDQ.d/*<max_mod_v_ref*max_mod_v_ref*/)<(VDQq_tempp_dec*VDQq_tempp_dec+VDQ.d*VDQ.d/*<max_mod_v_ref*max_mod_v_ref*/))
-				{VDQ.q=VDQq_temp;T1T2<<"act_qm"<<endl;}
-			else{VDQ.q=VDQq_tempp;T1T2<<"act_qp"<<endl;}
+		T1T2 <<"exceeded by:"<<sqrt(VDQ.d*VDQ.d+VDQ.q*VDQ.q)<<endl;
+		if (v.alpha>2.0/3.0*VDC || v.alpha<-2.0/3.0*VDC){	
 		
-			VDQ_ant.q=VDQ.q;
-			VDQ.q+=const_VDQ_q;
-		}
-		
-		//v=InvPark((RotorFluxAngle_),VDQ);
-		calc_max_mod_v_ref(InvPark((RotorFluxAngle_),VDQ));
-		if (max_mod_v_ref*max_mod_v_ref-VDQ.q*VDQ.q > 0){	
-			float VDQd_tempp;
-			if (((VDQ.d*VDQ.d+VDQ.q*VDQ.q)) > max_mod_v_ref*max_mod_v_ref ){
-				
-				if (    -VDQ_ant.d > -const_VDQ_d+sqrt(-VDQ.q*VDQ.q+max_mod_v_ref*max_mod_v_ref) )VDQd_tempp = -(-const_VDQ_d+sqrt(-VDQ.q*VDQ.q+max_mod_v_ref*max_mod_v_ref));
-				else if (VDQ_ant.d > -const_VDQ_d+sqrt(-VDQ.q*VDQ.q+max_mod_v_ref*max_mod_v_ref) )VDQd_tempp =   -const_VDQ_d+sqrt(-VDQ.q*VDQ.q+max_mod_v_ref*max_mod_v_ref);
-				else VDQd_tempp=VDQ_ant.d;
-			}
-			float VDQd_tempp_dec=VDQd_tempp+const_VDQ_d;
-			float VDQd_temp;
-			if ((VDQd_tempp_dec*VDQd_tempp_dec+VDQ.q*VDQ.q>max_mod_v_ref*max_mod_v_ref*1.05)){
-				
-				if (    -VDQ_ant.d > -const_VDQ_d-sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.q*VDQ.q)) VDQd_temp= -(-const_VDQ_d-sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.q*VDQ.q));
-				else if (VDQ_ant.d > -const_VDQ_d-sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.q*VDQ.q)) VDQd_temp=  (-const_VDQ_d-sqrt( max_mod_v_ref*max_mod_v_ref-VDQ.q*VDQ.q));
-				else VDQd_temp=VDQ_ant.d;
-			}
-			float VDQd_temp_dec=VDQd_temp+const_VDQ_d;	
-			if ((VDQd_temp_dec*VDQd_temp_dec+VDQ.q*VDQ.q/*<max_mod_v_ref*max_mod_v_ref*/)<(VDQ.q*VDQ.q+VDQd_tempp_dec*VDQd_tempp_dec/*<max_mod_v_ref*max_mod_v_ref*/))
-				{VDQ.d=VDQd_temp;T1T2<<"act_dm"<<endl;}
-			else{VDQ.d=VDQd_tempp;T1T2<<"act_dp"<<endl;}
-			
-			VDQ_ant.d=VDQ.d;
-			VDQ.d+=const_VDQ_d;
-			//v=InvPark((RotorFluxAngle_),VDQ);
-		}
-		
-		do{	
-				VDQ.d=VDQ_ant.d+const_VDQ_d;
-				VDQ.q=VDQ_ant.q+const_VDQ_q;
-					
-				
-				//if((VDQ.q>0&&VDQ_ant.q<0)||(VDQ_ant.q>0&&VDQ.q<0))/*VDQ_ant.q=VDQ_ant.q*1.08*/break;else
-				VDQ_ant.q=VDQ_ant.q*0.5;
-				calc_max_mod_v_ref(InvPark((RotorFluxAngle_),VDQ));
-				v=InvPark((RotorFluxAngle_),VDQ);//TODO remove embedded
-				T1T2<<"q_ant"<<VDQ_ant.q<<"q_"<<VDQ.q<<"sqrt_v.beta_v.alpha_q"<<sqrt(v.beta*v.beta+v.alpha*v.alpha)<<"sqrt_vDQ.d_VDQ.q"<<sqrt((VDQ.d*VDQ.d+VDQ.q*VDQ.q))<<endl;
-		}while ( ((VDQ.d*VDQ.d+VDQ.q*VDQ.q)) > max_mod_v_ref*max_mod_v_ref && ((((VDQ_ant.q >0 && const_VDQ_q>0) && ((VDQ.q-const_VDQ_q)-VDQ_ant.q>0.3))||(VDQ_ant.q<0 && const_VDQ_q<0 && ((VDQ.q-const_VDQ_q)-VDQ_ant.q<-0.3)))&&(!((VDQ.q>0&&VDQ_ant.q<0)||(VDQ_ant.q>0&&VDQ.q<0))/*&&(VDQ_ant.q+const_VDQ_q>0.3)*/)))
-		;//TODO
-		do{	
-				
-				VDQ.d=VDQ_ant.d+const_VDQ_d;
-				VDQ.q=VDQ_ant.q+const_VDQ_q;
-				//v=InvPark((RotorFluxAngle_),VDQ);
-				//if((VDQ.d>0&&VDQ_ant.d<0)||(VDQ_ant.d>0&&VDQ.d<0))/*VDQ_ant.d=VDQ_ant.d*1.07*/break;else
-				 VDQ_ant.d=VDQ_ant.d*0.64/*IDQ.d: 0.94imr: 0.96*/;
-				calc_max_mod_v_ref(InvPark((RotorFluxAngle_),VDQ));
-				v=InvPark((RotorFluxAngle_),VDQ);//TODO remove embedded
-			T1T2<<"d_ant"<<VDQ_ant.d<<"d_"<<VDQ.d<<"sqrt_v.beta_v.alpha_d"<<sqrt(v.beta*v.beta+v.alpha*v.alpha)<<"sqrt_vDQ.d_VDQ.q"<<sqrt((VDQ.d*VDQ.d+VDQ.q*VDQ.q))<<endl;
-			
-		}while ( ((VDQ.d*VDQ.d+VDQ.q*VDQ.q)) > max_mod_v_ref*max_mod_v_ref && ((((VDQ_ant.d >0 && const_VDQ_d>0) && ((VDQ.d-const_VDQ_d)-VDQ_ant.d>0.3))||(VDQ_ant.d<0 && const_VDQ_d<0 && ((VDQ.d-const_VDQ_d)-VDQ_ant.d<-0.3)))&&(!((VDQ.d>0&&VDQ_ant.d<0)||(VDQ_ant.d>0&&VDQ.d<0))/*&&(VDQ_ant.d+const_VDQ_d>0.3)*/)))
-		;//TODO
-		
-		v=InvPark((RotorFluxAngle_),VDQ);
-		calc_max_mod_v_ref(InvPark((RotorFluxAngle_),VDQ));
-		if ( /*((VDQ.d*VDQ.d+VDQ.q*VDQ.q)) > max_mod_v_ref*max_mod_v_ref*/(/*sqrt*/(v.beta*v.beta+v.alpha*v.alpha)) > max_mod_v_ref*max_mod_v_ref ){
 			v.beta = sin(ang)*max_mod_v_ref;
 			v.alpha = cos(ang)*max_mod_v_ref;
 		}
+		else if (v.alpha<=2.0/3.0*VDC && v.alpha>VDC/3.0)
+			{
+				if (v.beta>0)v.beta=(2.0/3.0*VDC-v.alpha)/tan(PI/2.0-PI/3.0);else v.beta=-(2.0/3.0*VDC-v.alpha)/tan(PI/2.0-PI/3.0);
+			}
+			else if(v.alpha>-VDC/3.0 && v.alpha<=VDC/3.0){
+					if (v.beta>0)v.beta=VDC/CONST_SQRT3_;else /*if(v.beta<0)*/ v.beta=-VDC/CONST_SQRT3_;
+					}
+				 else if(v.alpha<=-VDC/3.0 && v.alpha>=-2.0/3.0*VDC){
+						if (v.beta>0)v.beta=(2.0/3.0*VDC+v.alpha)/tan(PI/2.0-PI/3.0);else v.beta=-(2.0/3.0*VDC+v.alpha)/tan(PI/2.0-PI/3.0);
+						}
+		calc_max_mod_v_ref(v);	  
+		if (((v.beta*v.beta+v.alpha*v.alpha)) > max_mod_v_ref*max_mod_v_ref ){
+			v.beta = sin(ang)*max_mod_v_ref;
+			v.alpha = cos(ang)*max_mod_v_ref;
 		
-		/*if (v.alpha > 0 && (v.alpha*v.alpha)>=(max_mod_v_ref*max_mod_v_ref)){
-			v.alpha = max_mod_v_ref;
-			v.beta=0;	}
-		else if ( v.alpha < 0 && (v.alpha*v.alpha) >= (max_mod_v_ref*max_mod_v_ref) ){
-				v.alpha = -max_mod_v_ref;
-				v.beta=0;}			qqq
-		else	
-			v.beta = sqrt(max_mod_v_ref*max_mod_v_ref-v.alpha*v.alpha);
-		*/
-		T1T2<< "v.beta "<<v.beta;
-		T1T2<<"v.alpha "<<v.alpha<<endl;
-	}
-if(0==1){
-	calc_max_mod_v_ref(InvPark((RotorFluxAngle_),VDQ));
-	if ((VDQ.d*VDQ.d+const_VDQ_q*const_VDQ_q) > max_mod_v_ref*max_mod_v_ref && !((VDQ_ant.q+const_VDQ_q>0&&VDQ_ant.q<0)||(VDQ_ant.q>0&&VDQ_ant.q+const_VDQ_q<0))){
-		VDQ_ant.q*=0.1;VDQ.q=VDQ_ant.q+const_VDQ_q;
-		//v=InvPark((RotorFluxAngle_),VDQ);
-		calc_max_mod_v_ref(InvPark((RotorFluxAngle_),VDQ));}
-	if ((VDQ.q*VDQ.q+const_VDQ_d*const_VDQ_d) > max_mod_v_ref*max_mod_v_ref && !((VDQ_ant.q+const_VDQ_q>0&&VDQ_ant.q<0)||(VDQ_ant.q>0&&VDQ_ant.q+const_VDQ_q<0))){
-		VDQ_ant.d*=0.4;VDQ.d=VDQ_ant.d+const_VDQ_d;
-		//v=InvPark((RotorFluxAngle_),VDQ);
-		calc_max_mod_v_ref(InvPark((RotorFluxAngle_),VDQ));}
-	if ( /*((VDQ.d*VDQ.d+VDQ.q*VDQ.q)) > max_mod_v_ref*max_mod_v_ref*/(/*sqrt*/(v.beta*v.beta+v.alpha*v.alpha)) > max_mod_v_ref*max_mod_v_ref ){
-		v.beta = sin(ang)*max_mod_v_ref;
-		v.alpha = cos(ang)*max_mod_v_ref;
 		}
-}		
-//here	////VDQ_alpha_esc=v.alpha;//sqrt(v.beta*v.beta+v.alpha*v.alpha)/2/3*VDC/*max_mod_v_ref*/*sin(ang);
-	////VDQ_beta_esc=v.beta;//sqrt(v.beta*v.beta+v.alpha*v.alpha)/2/3*VDC/*max_mod_v_ref*/*cos(ang);
+	}
+	
 	
 	if (ang>=0&&ang<(PI/3)){
 			T1=3.0/2.0*T/VDC*(v.alpha-v.beta/CONST_SQRT3_);//T1=abs(v.alpha)/abs(Clarke(tThreePhase(2*VDC/3,-VDC/3,-VDC/3)).alpha)*T;
@@ -353,62 +340,84 @@ double sum_power_battery = 0.0;
 bool e=true;
 int n_rtc=0;
 double T_G_R_b_clutch=T_G_R_ant;//thing its not needed
-double Vf=0.0;
+//double Vf=0.0;
+double Te=0.0;//torque motor
+double J2=0.0;//inercia vehicle??
+double w_ref_ant=0.0;
+
 using namespace std;
 using namespace Maths;
-double wr_b_clutch;
 
-double motor::torque_z(double Vds,double Vqs,double angle_get_wm){//doesnt work, torque generated frame synchronous rotor
+//tried runge-kutta method but doesnt work: f(x)=f(t) = (por ex.) Vds(t),necessitaria-se de f(x+h/2)=f(t+T/2), (update.: experimentei o seguinte e nao funcionou)uma solucao seria h=2*T, guardando os valores de T-1, T; ex. Vds_T_1=Vds_T . torque generated frame synchronous rotor
+double motor::torque_z(double Vds,double Vqs,double angle_get_wm){
 			cout<<"vds:"<<Vds<<endl<<"Vqs:"<<Vqs<<endl;
 	double Lls=Ls-M;
 		if (angle_get_wm==0.0)angle_get_wm=0.00000000001;
 		double	s_2=(angle_get_wm-wr*np)/angle_get_wm*(angle_get_wm-wr*np)/angle_get_wm;
-		double Rfe=325;//Rm/(s_2+1);		
+		double Rfe=Rm/(s_2+1);//325;		
+		//usado no euler:
+			
+		double fds_=1/(1/T+Rs/Lls)*(Vds+fds/T+/*np*wr*/angle_get_wm*fqs+Rs*M/Lls*Idm);
+		double fqs_=1/(1/T+Rs/Lls)*(Vqs+fqs/T-/*np*wr*/angle_get_wm*fds+Rs*M/Lls*Iqm);
+		double fdr_=1/(1/T+Rr/Llr)*(fdr/T+(angle_get_wm-np*wr)*fqr+M*Rr/Llr*Idm);
+		double fqr_=1/(1/T+Rr/Llr)*(fqr/T-(angle_get_wm-np*wr)*fdr+M*Rr/Llr*Iqm);
+		double Idm_=1/(1/T+Rfe/Lls+Rfe/Llr+Rfe/M)*(Rfe/(Lls*M)*fds+Rfe/(M*Llr)*fdr+Idm/T+(angle_get_wm/*-np*wr*/)*Iqm);//(-Lr/Llr*Idm+ids+fdr/Llr+angle_get_wm/*np*wr*/*M/Rfe*Iqm)/M*Rfe;
+		double Iqm_=1/(1/T+Rfe/Lls+Rfe/Llr+Rfe/M)*(Rfe/(Lls*M)*fqs+Rfe/(M*Llr)*fqr+Iqm/T-(angle_get_wm/*-np*wr*/)*Idm);//(-Lr/Llr*Iqm+iqs-angle_get_wm/*np*wr*/*M/Rfe*Idm)/M*Rfe;
+
+		//double fds_k1=T/(1/T+Rs/Lls)*(Vds+fds/T+/*np*wr*/angle_get_wm*fqs+Rs*M/Lls*Idm);
+		//double fqs_k1=T/(1/T+Rs/Lls)*(Vqs+fqs/T-/*np*wr*/angle_get_wm*fds+Rs*M/Lls*Iqm);
+		//double fdr_k1=T/(1/T+Rr/Llr)*(fdr/T+(angle_get_wm-np*wr)*fqr+M*Rr/Llr*Idm);
+		//double fqr_k1=T/(1/T+Rr/Llr)*(fqr/T-(angle_get_wm-np*wr)*fdr+M*Rr/Llr*Iqm);
+		//double Idm_k1=T/(1/T+Rfe/Lls+Rfe/Llr+Rfe/M)*(Rfe/(Lls*M)*fds+Rfe/(M*Llr)*fdr+Idm/T+(angle_get_wm/*-np*wr*/)*Iqm);//(-Lr/Llr*Idm+ids+fdr/Llr+angle_get_wm/*np*wr*/*M/Rfe*Iqm)/M*Rfe;
+		//double Iqm_k1=T/(1/T+Rfe/Lls+Rfe/Llr+Rfe/M)*(Rfe/(Lls*M)*fqs+Rfe/(M*Llr)*fqr+Iqm/T-(angle_get_wm/*-np*wr*/)*Idm);//(-Lr/Llr*Iqm+iqs-angle_get_wm/*np*wr*/*M/Rfe*Idm)/M*Rfe;
+
+		//double fds_k2=T/(1/T+Rs/Lls)*((Vds+T/2)+(fds+fds_k1/2)/T+/*np*wr*/angle_get_wm*(fqs+fqs_k1/2)+Rs*M/Lls*(Idm+Idm_k1/2));
+		//double fqs_k2=T/(1/T+Rs/Lls)*((Vqs+T/2)+(fqs+fqs_k1/2)/T-/*np*wr*/angle_get_wm*(fds+fds_k1/2)+Rs*M/Lls*(Iqm+Iqm_k1/2));
+		//double fdr_k2=T/(1/T+Rr/Llr)*((fdr+fdr_k1/2)/T+(angle_get_wm-np*wr)*(fqr+fqr_k1/2)+M*Rr/Llr*(Idm+Idm_k1/2));
+		//double fqr_k2=T/(1/T+Rr/Llr)*((fqr+fqr_k1/2)/T-(angle_get_wm-np*wr)*(fdr+fdr_k1/2)+M*Rr/Llr*(Iqm+Iqm_k1/2));
+		//double Idm_k2=T/(1/T+Rfe/Lls+Rfe/Llr+Rfe/M)*(Rfe/(Lls*M)*(fds+fds_k1/2)+Rfe/(M*Llr)*(fdr+fdr_k1/2)+(Idm+Idm_k1/2)/T+(angle_get_wm/*-np*wr*/)*(Iqm+Iqm_k1/2));//(-Lr/Llr*Idm+ids+fdr/Llr+angle_get_wm/*np*wr*/*M/Rfe*Iqm)/M*Rfe;
+		//double Iqm_k2=T/(1/T+Rfe/Lls+Rfe/Llr+Rfe/M)*(Rfe/(Lls*M)*(fqs+fqs_k1/2)+Rfe/(M*Llr)*(fqr+fqr_k1/2)+(Iqm+Iqm_k1/2)/T-(angle_get_wm/*-np*wr*/)*(Idm+Idm_k1/2));//(-Lr/Llr*Iqm+iqs-angle_get_wm/*np*wr*/*M/Rfe*Idm)/M*Rfe;
+
+		//_______________
 		
-		double fds_k1=(Vds-Rs/Lls*fds+/*np*wr*/angle_get_wm*fqs+Rs*M/Lls*Idm);
-		double fqs_k1=(Vqs-Rs/Lls*fqs-/*np*wr*/angle_get_wm*fds+Rs*M/Lls*Iqm);
-		double fdr_k1=-Rr/Llr*fdr+(angle_get_wm-np*wr)*fqr+M*Rr/Llr*Idm;
-		double fqr_k1=-Rr/Llr*fqr-(angle_get_wm-np*wr)*fdr+M*Rr/Llr*Iqm;
-		double Idm_k1=Rfe/(Lls*M)*fds+Rfe/(M*Llr)*fdr+(-Rfe/Lls-Rfe/Llr-Rfe/M)*Idm+(angle_get_wm-np*wr)*Iqm;//(-Lr/Llr*Idm+ids+fdr/Llr+angle_get_wm/*np*wr*/*M/Rfe*Iqm)/M*Rfe;
-		double Iqm_k1=Rfe/(Lls*M)*fqs+Rfe/(M*Llr)*fqr+(-Rfe/Lls-Rfe/Llr-Rfe/M)*Iqm-(angle_get_wm-np*wr)*Idm;//(-Lr/Llr*Iqm+iqs-angle_get_wm/*np*wr*/*M/Rfe*Idm)/M*Rfe;
-		//double fdr_k1=(-fdr+M*Idm)*Rr/Llr;
 		
-		double fds_k2=(Vds-Rs/Lls*fds_k1/2*T+/*np*wr*/angle_get_wm*fqs_k1/2*T+Rs*M/Lls*Idm_k1/2*T);
-		double fqs_k2=(Vqs-Rs/Lls*fqs_k1/2*T-/*np*wr*/angle_get_wm*fds_k1/2*T+Rs*M/Lls*Iqm_k1/2*T);
-		double fdr_k2=-Rr/Llr*fdr_k1/2*T+(angle_get_wm-np*wr)*fqr_k1/2*T+M*Rr/Llr*Idm_k1/2*T;
-		double fqr_k2=-Rr/Llr*fqr_k1/2*T-(angle_get_wm-np*wr)*fdr_k1/2*T+M*Rr/Llr*Iqm_k1/2*T;
-		double Idm_k2=Rfe/(Lls*M)*fds_k1/2*T+Rfe/(M*Llr)*fdr_k1/2*T+(-Rfe/Lls-Rfe/Llr-Rfe/M)*Idm_k1/2*T+(angle_get_wm-np*wr)*Iqm_k1/2*T;//(-Lr/Llr*Idm+ids+fdr/Llr+angle_get_wm/*np*wr*/*M/Rfe*Iqm)/M*Rfe;
-		double Iqm_k2=Rfe/(Lls*M)*fqs_k1/2*T+Rfe/(M*Llr)*fqr_k1/2*T+(-Rfe/Lls-Rfe/Llr-Rfe/M)*Iqm_k1/2*T-(angle_get_wm-np*wr)*Idm_k1/2*T;//(-Lr/Llr*Iqm+iqs-angle_get_wm/*np*wr*/*M/Rfe*Idm)/M*Rfe;
+		double fds_k1=2.0*T*(Vds_T_1-fds*Rs/Lls+/*np*wr*/angle_get_wm_T_1*fqs+Rs*M/Lls*Idm);
+		double fqs_k1=2.0*T*(Vqs_T_1-fqs*Rs/Lls-/*np*wr*/angle_get_wm_T_1*fds+Rs*M/Lls*Iqm);
+		double fdr_k1=2.0*T*(-fdr*Rr/Llr+(angle_get_wm_T_1-np*wr_T_1)*fqr+M*Rr/Llr*Idm);
+		double fqr_k1=2.0*T*(-fqr*Rr/Llr-(angle_get_wm_T_1-np*wr_T_1)*fdr+M*Rr/Llr*Iqm);
+		double Idm_k1=2.0*T*(Rfe/(Lls*M)*fds-Idm*Rfe*(1.0/Lls+1.0/Llr+1.0/M)+Rfe/(M*Llr)*fdr+(angle_get_wm_T_1/*-np*wr*/)*Iqm);//(-Lr/Llr*Idm+ids+fdr/Llr+angle_get_wm/*np*wr*/*M/Rfe*Iqm)/M*Rfe;
+		double Iqm_k1=2.0*T*(Rfe/(Lls*M)*fqs-Iqm*Rfe*(1.0/Lls+1.0/Llr+1.0/M)+Rfe/(M*Llr)*fqr-(angle_get_wm_T_1/*-np*wr*/)*Idm);//(-Lr/Llr*Iqm+iqs-angle_get_wm/*np*wr*/*M/Rfe*Idm)/M*Rfe;
 		
-		double fds_k3=(Vds-Rs/Lls*fds_k2/2*T+/*np*wr*/angle_get_wm*fqs_k2/2*T+Rs*M/Lls*Idm_k2/2*T);
-		double fqs_k3=(Vqs-Rs/Lls*fqs_k2/2*T-/*np*wr*/angle_get_wm*fds_k2/2*T+Rs*M/Lls*Iqm_k2/2*T);
-		double fdr_k3=-Rr/Llr*fdr_k2/2*T+(angle_get_wm-np*wr)*fqr_k2/2*T+M*Rr/Llr*Idm_k2/2*T;
-		double fqr_k3=-Rr/Llr*fqr_k2/2*T-(angle_get_wm-np*wr)*fdr_k2/2*T+M*Rr/Llr*Iqm_k2/2*T;
-		double Idm_k3=Rfe/(Lls*M)*fds_k2/2*T+Rfe/(M*Llr)*fdr_k2/2*T+(-Rfe/Lls-Rfe/Llr-Rfe/M)*Idm_k2/2*T+(angle_get_wm-np*wr)*Iqm_k2/2*T;//(-Lr/Llr*Idm+ids+fdr/Llr+angle_get_wm/*np*wr*/*M/Rfe*Iqm)/M*Rfe;
-		double Iqm_k3=Rfe/(Lls*M)*fqs_k2/2*T+Rfe/(M*Llr)*fqr_k2/2*T+(-Rfe/Lls-Rfe/Llr-Rfe/M)*Iqm_k2/2*T-(angle_get_wm-np*wr)*Idm_k2/2*T;//(-Lr/Llr*Iqm+iqs-angle_get_wm/*np*wr*/*M/Rfe*Idm)/M*Rfe;
+		double fds_k2=2.0*T*((Vds_T)-(fds+fds_k1/2)*Rs/Lls+/*np*wr*/(angle_get_wm_T)*(fqs+fqs_k1/2)+Rs*M/Lls*(Idm+Idm_k1/2));
+		double fqs_k2=2.0*T*((Vqs_T)-(fqs+fqs_k1/2)*Rs/Lls-/*np*wr*/(angle_get_wm_T)*(fds+fds_k1/2)+Rs*M/Lls*(Iqm+Iqm_k1/2));
+		double fdr_k2=2.0*T*(-(fdr+fdr_k1/2)*Rr/Llr+((angle_get_wm_T)-(np*wr_T))*(fqr+fqr_k1/2)+M*Rr/Llr*(Idm+Idm_k1/2));
+		double fqr_k2=2.0*T*(-(fqr+fqr_k1/2)*Rr/Llr-((angle_get_wm_T)-(np*wr_T))*(fdr+fdr_k1/2)+M*Rr/Llr*(Iqm+Iqm_k1/2));
+		double Idm_k2=2.0*T*(Rfe/(Lls*M)*(fds+fds_k1/2)-(Idm+Idm_k1/2)*Rfe*(1.0/Lls+1.0/Llr+1.0/M)+Rfe/(M*Llr)*(fdr+fdr_k1/2)+((angle_get_wm_T)/*-np*wr*/)*(Iqm+Iqm_k1/2));//(-Lr/Llr*Idm+ids+fdr/Llr+angle_get_wm/*np*wr*/*M/Rfe*Iqm)/M*Rfe;
+		double Iqm_k2=2.0*T*(Rfe/(Lls*M)*(fqs+fqs_k1/2)-(Iqm+Iqm_k1/2)*Rfe*(1.0/Lls+1.0/Llr+1.0/M)+Rfe/(M*Llr)*(fqr+fqr_k1/2)-((angle_get_wm_T)/*-np*wr*/)*(Idm+Idm_k1/2));//(-Lr/Llr*Iqm+iqs-angle_get_wm/*np*wr*/*M/Rfe*Idm)/M*Rfe;
 		
-		double fds_k4=(Vds-Rs/Lls*fds_k3*T+/*np*wr*/angle_get_wm*fqs_k3*T+Rs*M/Lls*Idm_k3*T);
-		double fqs_k4=(Vqs-Rs/Lls*fqs_k3*T-/*np*wr*/angle_get_wm*fds_k3*T+Rs*M/Lls*Iqm_k3*T);
-		double fdr_k4=-Rr/Llr*fdr_k3*T+(angle_get_wm-np*wr)*fqr_k3*T+M*Rr/Llr*Idm_k3*T;
-		double fqr_k4=-Rr/Llr*fqr_k3*T-(angle_get_wm-np*wr)*fdr_k3*T+M*Rr/Llr*Iqm_k3*T;
-		double Idm_k4=Rfe/(Lls*M)*fds_k3*T+Rfe/(M*Llr)*fdr_k3*T+(-Rfe/Lls-Rfe/Llr-Rfe/M)*Idm_k3*T+(angle_get_wm-np*wr)*Iqm_k3*T;//(-Lr/Llr*Idm+ids+fdr/Llr+angle_get_wm/*np*wr*/*M/Rfe*Iqm)/M*Rfe;
-		double Iqm_k4=Rfe/(Lls*M)*fqs_k3*T+Rfe/(M*Llr)*fqr_k3*T+(-Rfe/Lls-Rfe/Llr-Rfe/M)*Iqm_k3*T-(angle_get_wm-np*wr)*Idm_k3*T;//(-Lr/Llr*Iqm+iqs-angle_get_wm/*np*wr*/*M/Rfe*Idm)/M*Rfe;
+		double fds_k3=2.0*T*((Vds_T)-(fds+fds_k2/2)*Rs/Lls+/*np*wr*/(angle_get_wm_T)*(fqs+fqs_k2/2)+Rs*M/Lls*(Idm+Idm_k2/2));
+		double fqs_k3=2.0*T*((Vqs_T)-(fqs+fqs_k2/2)*Rs/Lls-/*np*wr*/(angle_get_wm_T)*(fds+fds_k2/2)+Rs*M/Lls*(Iqm+Iqm_k2/2));
+		double fdr_k3=2.0*T*(-(fdr+fdr_k2/2)*Rr/Llr+((angle_get_wm_T)-(np*wr_T))*(fqr+fqr_k2/2)+M*Rr/Llr*(Idm+Idm_k2/2));
+		double fqr_k3=2.0*T*(-(fqr+fqr_k2/2)*Rr/Llr-((angle_get_wm_T)-(np*wr_T))*(fdr+fdr_k2/2)+M*Rr/Llr*(Iqm+Iqm_k2/2));
+		double Idm_k3=2.0*T*(Rfe/(Lls*M)*(fds+fds_k2/2)-(Idm+Idm_k2/2)*Rfe*(1.0/Lls+1.0/Llr+1.0/M)+Rfe/(M*Llr)*(fdr+fdr_k2/2)+((angle_get_wm_T)/*-np*wr*/)*(Iqm+Iqm_k2/2));//(-Lr/Llr*Idm+ids+fdr/Llr+angle_get_wm/*np*wr*/*M/Rfe*Iqm)/M*Rfe;
+		double Iqm_k3=2.0*T*(Rfe/(Lls*M)*(fqs+fqs_k2/2)-(Iqm+Iqm_k2/2)*Rfe*(1.0/Lls+1.0/Llr+1.0/M)+Rfe/(M*Llr)*(fqr+fqr_k2/2)-((angle_get_wm_T)/*-np*wr*/)*(Idm+Idm_k2/2));		
 		
-		double fds_1=fds+T/6*(fds_k1+2*fds_k2+2*fds_k3+fds_k4);
-		double fqs_1=fqs+T/6*(fqs_k1+2*fqs_k2+2*fqs_k3+fqs_k4);
-		double fdr_1=fdr+T/6*(fdr_k1+2*fdr_k2+2*fdr_k3+fdr_k4);
-		double fqr_1=fqr+T/6*(fqr_k1+2*fqr_k2+2*fqr_k3+fqr_k4);
-		double Idm_1=Idm+T/6*(Idm_k1+2*Idm_k2+2*Idm_k3+Idm_k4);
-		double Iqm_1=Iqm+T/6*(Iqm_k1+2*Iqm_k2+2*Iqm_k3+Iqm_k4);
+		double fds_k4=2.0*T*((Vds/*+T*/)-(fds+fds_k3)*Rs/Lls+/*np*wr*/(angle_get_wm/*+T*/)*(fqs+fqs_k3)+Rs*M/Lls*(Idm+Idm_k3));
+		double fqs_k4=2.0*T*((Vqs/*+T*/)-(fqs+fqs_k3)*Rs/Lls-/*np*wr*/(angle_get_wm/*+T*/)*(fds+fds_k3)+Rs*M/Lls*(Iqm+Iqm_k3));
+		double fdr_k4=2.0*T*(-(fdr+fdr_k3)*Rr/Llr+((angle_get_wm/*+T*/)-(np*wr/*+T*/))*(fqr+fqr_k3)+M*Rr/Llr*(Idm+Idm_k3));
+		double fqr_k4=2.0*T*(-(fqr+fqr_k3)*Rr/Llr-((angle_get_wm/*+T*/)-(np*wr/*+T*/))*(fdr+fdr_k3)+M*Rr/Llr*(Iqm+Iqm_k3));
+		double Idm_k4=2.0*T*(Rfe/(Lls*M)*(fds+fds_k3)-(Idm+Idm_k3)*Rfe*(1.0/Lls+1.0/Llr+1.0/M)+Rfe/(M*Llr)*(fdr+fdr_k3)+((angle_get_wm/*+T*/)/*-np*wr*/)*(Iqm+Iqm_k3));//(-Lr/Llr*Idm+ids+fdr/Llr+angle_get_wm/*np*wr*/*M/Rfe*Iqm)/M*Rfe;
+		double Iqm_k4=2.0*T*(Rfe/(Lls*M)*(fqs+fqs_k3)-(Iqm+Iqm_k3)*Rfe*(1.0/Lls+1.0/Llr+1.0/M)+Rfe/(M*Llr)*(fqr+fqr_k3)-((angle_get_wm/*+T*/)/*-np*wr*/)*(Idm+Idm_k3));		
 		
-//		double iiqf=iiqs+iiqr-Iqm;
-		iqf=iqs+iqr-Iqm;
-//		double iidf=iids+iidr-Idm;
-		idf=ids+idr-Idm;		
-	
-		//Idm=Idm+(Rfe*idf+angle_get_wm*M*Iqm)*T/M;
-		//Iqm=Iqm+(Rfe*iqf-angle_get_wm*M*Idm)*T/M;
 		
+		double fds_1=fds+1.0/6.0*(fds_k1+2.0*fds_k2+2.0*fds_k3+fds_k4);
+		double fqs_1=fqs+1.0/6.0*(fqs_k1+2.0*fqs_k2+2.0*fqs_k3+fqs_k4);
+		double fdr_1=fdr+1.0/6.0*(fdr_k1+2.0*fdr_k2+2.0*fdr_k3+fdr_k4);
+		double fqr_1=fqr+1.0/6.0*(fqr_k1+2.0*fqr_k2+2.0*fqr_k3+fqr_k4);
+		double Idm_1=Idm+1.0/6.0*(Idm_k1+2.0*Idm_k2+2.0*Idm_k3+Idm_k4);
+		double Iqm_1=Iqm+1.0/6.0*(Iqm_k1+2.0*Iqm_k2+2.0*Iqm_k3+Iqm_k4);
+		
+
 		fds=fds_1;
 		fqs=fqs_1;
 		Idm=Idm_1;
@@ -418,81 +427,62 @@ double motor::torque_z(double Vds,double Vqs,double angle_get_wm){//doesnt work,
 		
 		iqs=(fqs-M*Iqm)/Lls;
 		ids=(fds-M*Idm)/Lls;
-				
-		idr=(fdr-M*Idm)/Llr;
-		iqr=-M*Iqm/Llr;
 		
-		torq_g=Kt*ids*iqs;
-		//double ttorq_g=3.0/2.0*M*np/Lr*(iqs*fdr-ids*fqr);
-		double torq_ggg=3.0/2.0*M*np/Lr*(fdr*(Iqm-(fqr-M*Iqm)/Llr)-fqr*(Idm-(fdr-M*Idm)/Llr));//double torq_gggg=M*np/Lr*(fdr*(iiqs-iiqf)-fqr*(iids-iidf));
-		double torq_gggg=3.0/2.0*M*np/Lr*(fdr*(fqs-M*Iqm)/Lls-fqr*(fds-M*Idm)/Lls);
-		double torq_ggggg=3.0/2.0*M*np/Lr/roLs*(fdr*(fqs)-fqr*(fds));
-		//double torq_gggg=M/Llr*(Llr*idr+M*Idm)*Iqm;
-		//double torq_gggg=3.0/2.0*M*np/Lr*(fdr*Iqm-fqr*Idm);
-		fTorque<<FIXED_FLOAT(n*T)<<" sec. Torque_gerado:"<<torq_ggggg<<" g :"<<torq_g<<" ids "<<ids <<" iqs "<<iqs<<"   ggggg  "<< torq_gggg/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl;
-	return /*M/Llr*fdr*Iqm*/torq_ggggg;
+		Vds_T_1=Vds_T;
+		Vds_T=Vds;
+		Vqs_T_1=Vqs_T;
+		Vqs_T=Vqs;
+		angle_get_wm_T_1=angle_get_wm_T;
+		angle_get_wm_T=angle_get_wm;
+		wr_T_1=wr_T;
+		wr_T=wr;
+				
+		////idr=(fdr-M*Idm)/Llr;
+		////iqr=-M*Iqm/Llr;
+		
+		if (/*(t*wr)<0 &&*/ (IDC/*VDC*/)<0) sum_power_out += abs(IDC*VDC) ; else sum_power_out += (t*wr);
+	if (/*(t*wr)<0 &&*/ (IDC/*VDC*/)<0) sum_power_in += abs(t*wr); else sum_power_in += (IDC*VDC);
+	sum_power_trac += t*wr;
+	sum_power_battery += IDC*VDC/10000/3600;fTorque<<" battery energy : "<<sum_power_battery<<" (wh)"<<endl;
+	if (n*T==195)fTorque<<" efficiency end cycle: "<<sum_power_out/sum_power_in<<endl;
+	fTorque<<FIXED_FLOAT(n*T)<<" sec.; Torque_generated (previous): "<<t/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl<<" power (Torq*wr) (previous): "<<(t/*np*/*wr)<<" power (Vdc*Idc) (previous): "<<(IDC*VDC)<<endl;if (IDC<0) fTorque<<" efficiency (instant. generat.) (previous) :"<<(IDC*VDC)/(t/*np*/*wr);else fTorque<<" efficiency (instant. motor)(previous):"<<(t/*np*/*wr)/(IDC*VDC);fTorque<<" machine medium efficiency: "<<sum_power_out/sum_power_in/*<<" ef: "<<sum_power_trac/sum_power_battery*/<<endl<<"We- sincronous speed in ang. electric: "<<angle_get_wm<<endl<<"(angle_get_wm-wr*np) \"slip angle:\" "<<(angle_get_wm-wr*np)<<endl;//<<"torq_l:"<<torq_L<<endl;	
+	t=(3.0/2.0*M*np/Lr/roLs*(fdr*(fqs)-fqr*(fds)));
+	return /*M/Llr*fdr*Iqm*/t;
 };
 
-double motor::torque_g(double Vds,double Vqs,double angle_get_wm){//torque generated, frame generic . used backward euler method
-		//	cout<<"vds:"<<Vds<<endl<<"Vqs:"<<Vqs<<endl;
+double motor::torque_g(double Vds,double Vqs,double angle_get_wm){//torque generated, frame generic . used #######"backward euler method"######
+			cout<<"Vds:"<<Vds<<endl<<"Vqs:"<<Vqs<<endl;
 	double Lls=Ls-M;
 		if (angle_get_wm==0.0)angle_get_wm=0.00000000001;
 		double	s_2=(angle_get_wm-wr*np)/angle_get_wm*(angle_get_wm-wr*np)/angle_get_wm;
 		double Rfe=Rm/(s_2+1);		
-		
-		double fds_=T*Lls/(Lls+Rs*T)*(Vds+fds/T+/*np*wr*/angle_get_wm*fqs+Rs*M/Lls*Idm);
-		double fqs_=T*Lls/(Lls+Rs*T)*(Vqs+fqs/T-/*np*wr*/angle_get_wm*fds+Rs*M/Lls*Iqm);
-		double fdr_=T*Llr/(Llr+Rr*T)*(fdr/T+(angle_get_wm-np*wr)*fqr+M*Rr/Llr*Idm);
-		double fqr_=T*Llr/(Llr+Rr*T)*(fqr/T-(angle_get_wm-np*wr)*fdr+M*Rr/Llr*Iqm);
-		double Idm_=1/(1/T+Rfe/Lls+Rfe/Llr+Rfe/M)*(Rfe/(Lls*M)*fds+Rfe/(M*Llr)*fdr+Idm/T+(angle_get_wm-np*wr)*Iqm);//(-Lr/Llr*Idm+ids+fdr/Llr+angle_get_wm/*np*wr*/*M/Rfe*Iqm)/M*Rfe;
-		double Iqm_=1/(1/T+Rfe/Lls+Rfe/Llr+Rfe/M)*(Rfe/(Lls*M)*fqs+Rfe/(M*Llr)*fqr+Iqm/T-(angle_get_wm-np*wr)*Idm);//(-Lr/Llr*Iqm+iqs-angle_get_wm/*np*wr*/*M/Rfe*Idm)/M*Rfe;
+		//usado (fds_n+1-fds_n)/T=fds_n+1 +(...), e nao: (fds_n+1/T-fds_n)/T=fds_n+(...)
+		double fds_=1/(1/T+Rs/Lls)*(Vds+fds/T+/*np*wr*/angle_get_wm*fqs+Rs*M/Lls*Idm);
+		double fqs_=1/(1/T+Rs/Lls)*(Vqs+fqs/T-/*np*wr*/angle_get_wm*fds+Rs*M/Lls*Iqm);
+		double fdr_=1/(1/T+Rr/Llr)*(fdr/T+(angle_get_wm-np*wr)*fqr+M*Rr/Llr*Idm);
+		double fqr_=1/(1/T+Rr/Llr)*(fqr/T-(angle_get_wm-np*wr)*fdr+M*Rr/Llr*Iqm);
+		double Idm_=1/(1/T+Rfe/Lls+Rfe/Llr+Rfe/M)*(Rfe/(Lls*M)*fds+Rfe/(M*Llr)*fdr+Idm/T+(angle_get_wm/*-np*wr*/)*Iqm);//(-Lr/Llr*Idm+ids+fdr/Llr+angle_get_wm/*np*wr*/*M/Rfe*Iqm)/M*Rfe;
+		double Iqm_=1/(1/T+Rfe/Lls+Rfe/Llr+Rfe/M)*(Rfe/(Lls*M)*fqs+Rfe/(M*Llr)*fqr+Iqm/T-(angle_get_wm/*-np*wr*/)*Idm);//(-Lr/Llr*Iqm+iqs-angle_get_wm/*np*wr*/*M/Rfe*Idm)/M*Rfe;
 
+		
 		fds=fds_;
 		fqs=fqs_;
 		fdr=fdr_;
 		fqr=fqr_;
 		Idm=Idm_;
 		Iqm=Iqm_;
+		
 		ids=(fds-M*Idm)/Lls;
 		iqs=(fqs-M*Iqm)/Lls;
-		//ids=ids+(Vds/roLs-alfa*ids+B/TR*fdr+np*wr*B*fqr+np*wr*iqs)*T;
-		
-		//iqs=iqs+(Vqs/roLs-alfa*iqs+B/TR*fqr-np*wr*B*fdr-np*wr*ids)*T;
 		
 		
-//		fds=fds+(Vds+angle_get_wm*fqs-Rs*ids)*T;cout<<"fds:"<<fds<<endl;
-//		fqs=fqs+(Vqs-angle_get_wm*fds-Rs*iqs)*T;cout<<"fqs:"<<fqs<<endl;
-//		//fdr=fdr+(M/TR*ids-fdr/TR)*T;
-//		fdr=fdr+((angle_get_wm-np*wr)*fqr-Rr*idr)*T;cout<<"fdr:"<<fdr<<endl;
-//		//fqr=fqr+(M*iqs/TR-fqr/TR)*T;
-//		fqr=fqr+(-(angle_get_wm-np*wr)*fdr-Rr*iqr)*T;cout<<"fqr:"<<fqr<<endl;
-//		
-//		//idr=-M/(Ls*Lr-M*M)*fds+Ls/(Ls*Lr-M*M)*fdr;
-//		idr=fds/(M-Lr*Ls/M)-Ls*fdr/(M*M-Lr*Ls);
-//		//iqr=-M/(Ls*Lr-M*M)*fqs+Ls/(Ls*Lr-M*M)*fqr;//double torq_g=(-3/2*P/2*M/(Lr*Ls-M*M)*(fds*fqr-fqs*fdr));
-//		iqr=fqs/(M-Lr*Ls/M)-Ls*fqr/(M*M-Lr*Ls);
-//		
-//		//ids=Lr/(Lr*Ls-M*M)*fds-M/(Ls*Lr-M*M)*fdr;
-//		ids=(fdr-Lr*idr)/M;
-//		//iqs=Lr/(Lr*Ls-M*M)*fqs-M/(Ls*Lr-M*M)*fqr;
-//		iqs=(fqr-Lr*iqr)/M;
-//		
-//		//torq_g=M*np/Lr*(iqs*fdr-ids*fqr);
-//		torq_g=3.0/*2.0*/*np*(iqs*fds-ids*fqs);//TODO sobre 2?? acho que n
-//		/*cout<<"ids"<<ids<<endl<<"iqs"<<iqs<<endl;*/fTorque<<FIXED_FLOAT(n*T)<<" sec. Torque_gerado:"<<torq_g/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl;//<<"torq_l:"<<torq_L<<endl;	
-	
-	//cout<<"torq: "<<t<<endl<<"fqr: "<<fqr<<endl;
-	//double eff_act=(t/*np*/*wr)/(IDC*VDC);
-	//if (!std::isnan(eff_act))eff_act=(t/*np*/*wr)/(IDC*VDC);else eff_act=0.0001;
-	//eff_act/=(IDC*VDC)
-	//efficiency=(efficiency*(n-1)+eff_act)/n;
 	
 	if (/*(t*wr)<0 &&*/ (IDC/*VDC*/)<0) sum_power_out += abs(IDC*VDC) ; else sum_power_out += (t*wr);
 	if (/*(t*wr)<0 &&*/ (IDC/*VDC*/)<0) sum_power_in += abs(t*wr); else sum_power_in += (IDC*VDC);
 	sum_power_trac += t*wr;
 	sum_power_battery += IDC*VDC/10000/3600;fTorque<<"battery energy : "<<sum_power_battery<<" wh"<<endl;
-	if (n*T==195)fTorque<<"efficiency fim ciclo "<<sum_power_out/sum_power_in<<endl;
-	fTorque<<FIXED_FLOAT(n*T)<<" sec. Torque_gerado, previous:"<<t/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl<<"power (Torq*wr), previous: "<<(t/*np*/*wr)<<" power (Vdc*Idc), previous: "<<(IDC*VDC)<<endl;if (IDC<0) fTorque<<"previous,effici.(instant. generat.):"<<(IDC*VDC)/(t/*np*/*wr);else fTorque<<"previous, effici.(instant. motor):"<<(t/*np*/*wr)/(IDC*VDC);fTorque<<" machine medium efficiency: "<<sum_power_out/sum_power_in/*<<" ef: "<<sum_power_trac/sum_power_battery*/<<endl<<"We- sincronous speed in ang. electric: "<<angle_get_wm<<endl<<"(angle_get_wm-wr*np) \"slip angle:\" "<<(angle_get_wm-wr*np)<<endl;//<<"torq_l:"<<torq_L<<endl;	
+	if (n*T==195)fTorque<<"efficiency end cycle "<<sum_power_out/sum_power_in<<endl;
+	fTorque<<FIXED_FLOAT(n*T)<<" sec., Torque_generated (previous): "<<t/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl<<"power (Torque_generated*rotor_velocity)(previous):"<<(t/*np*/*wr)<<"; power (Vdc*Idc)(previous):"<<(IDC*VDC)<<endl;if (IDC<0) fTorque<<"efficiency (instant. generat.)(previous) :"<<(IDC*VDC)/(t/*np*/*wr);else fTorque<<" efficiency (instant. motor)(previous):"<<(t/*np*/*wr)/(IDC*VDC);fTorque<<" machine medium efficiency: "<<sum_power_out/sum_power_in/*<<" ef: "<<sum_power_trac/sum_power_battery*/<<endl<<"We- sincronous speed in ang. electric: "<<angle_get_wm<<endl<<"(angle_get_wm-wr*np) \"slip angle:\" "<<(angle_get_wm-wr*np)<<endl;//<<"torq_l:"<<torq_L<<endl;	
 	t=(3.0/2.0*M*np/Lr/roLs*(fdr*(fqs)-fqr*(fds)));
 	return t;
 };
@@ -509,27 +499,47 @@ motor::~motor(){};
 double motor::torque(double vas,double vbs,double vcs){
 		return torque_g(ClarkePark(RotorFluxAngle/*np*theta_r*/,tThreePhase(vas,vbs,vcs)).d/*alpha*/,ClarkePark(RotorFluxAngle/*np*theta_r*/,tThreePhase(vas,vbs,vcs)).q/*beta*/,angle.get_wm());
 };
-void control_loops::clutch(){
-	//double ss=R*R*MASSA/(T_G_R*T_G_R) * w_ref;
-	wr_b_clutch=wr;
-	double s=((1.0/2.0 * R*R*MASSA/(T_G_R_b_clutch*T_G_R_b_clutch) * wr/T_G_R_b_clutch*R*wr/T_G_R_b_clutch*R + 1.0/2.0*J*wr*wr)/(1.0/2.0*J+1.0/2.0*R*R*MASSA/(T_G_R*T_G_R)));
-	Vf=sqrt(s);
-	double a=(Vf-wr)/CLUTCH_TIME;//0.5 clutch time, division delta v by clutch time
-	torque_clutch=J*a;
-	fVel<<"Vf:"<<Vf<<" a: "<<a<<" torque_clutch:"<<torque_clutch<<endl;
-			}
+
+void control_loops::clutch(){//
+	double J1=J;
+	//double J2=MASSA*R*R/T_G_R/T_G_R;
+	//double Te=torque(va,vb,vc);
+	double T_l=get_torq_L();
+	double n1=get_wr();
+	//Torq_net=Te-T_l;
+	double n2=velocidade;//??
+	double Wfc=n2-n1;
+	
+	double Ru=1.0/(R2-R1)*(us/2.0*R2*R2+(ud-us)*(R2+1.0)/(fi*Wfc)*log(cosh(fi*R2*Wfc))-(us/2.0*R1*R1+(ud-us)*(R1+1.0)/(fi*Wfc)*log(cosh(fi*R1*Wfc))));
+	double Xto=XTO_MAX/(CLUTCH_TIME/T)*clutch_time;
+	double Ffc=F_MAX;
+	if (Xto>0.0 && Xto<=XTO_CNT)
+		{Ffc=0.0;}
+	else if(Xto>XTO_CNT && Xto<=XTO_CLS)
+			Ffc=F_MAX*(1.0-sqrt(1.0-pow((Xto-XTO_CNT)/(XTO_CLS-XTO_CNT),2)));		 		
+	double Tfc=-N_P*Ru*Ffc/T_G_R;
+	
+	n1=n1+(Te-Tfc)/J1*T;
+	n2=n2+(Tfc-T_l)/J2*T;
+	
+	velocidade=n2;
+	wr=n1;
+		fVel<<"Wr(rotor velocity): "<<n1<</*" a: "<<a<<*/" torque_clutch: "<<Tfc<<endl;
+}
 double motor::get_wr(double va,double vb,double vc/*double torq_g,double torq_L*/){
-		//double a=atan(gradiente);
+		//double a=atan(gradiente);//TODO estava comentado este e alinha a seguir --load in ifoc_2_sem_gui
 		//torq_L=(C_D*1/2*RO_AIR*A_F*wr/T_G_R*R*wr/T_G_R*R+C_R*MASSA*G*cos(a)+MASSA*G*sin(a))*R/T_G_R;
+		Te=torque(va,vb,vc);
 		if (e==true && velocidade*R/T_G_R*3.6 < 26){
 				T_G_R = (4.313 /*2.33 1.436 1 0.789*/*4.1/*1.9*/);
 			if (T_G_R_ant!=T_G_R){
 				T_G_R_b_clutch=T_G_R_ant;
 				//wr = wr *T_G_R/T_G_R_ant;
-				w_ref=w_ref *T_G_R/T_G_R_ant;/*end_f*1000/3600*T_G_R/R*/;
+				w_ref_ant=w_ref;
+				w_ref=0;//jan 2019 ;w_ref *T_G_R/T_G_R_ant;/*end_f*1000/3600*T_G_R/R*/;
 				
 				clutch_time=CLUTCH_TIME*1/T;
-				
+				velocidade=velocidade*T_G_R/T_G_R_ant;
 				T_G_R_ant=T_G_R;
 				n_rtc=0;
 				//angle.reset();
@@ -540,10 +550,11 @@ double motor::get_wr(double va,double vb,double vc/*double torq_g,double torq_L*
 			{T_G_R = (/*4.313*/ 2.33/*1.436 1 0.789*/*4.1/*1.9*/);
 			if (T_G_R_ant!=T_G_R){
 				//wr = wr *T_G_R/T_G_R_ant;
-				w_ref=w_ref *T_G_R/T_G_R_ant;/*end_f*1000/3600*T_G_R/R*/;
+				w_ref_ant=w_ref;
+				w_ref=0;//jan 2019 ;w_ref *T_G_R/T_G_R_ant;/*end_f*1000/3600*T_G_R/R*/;
 				
 				clutch_time=CLUTCH_TIME*1/T;
-				
+				velocidade=velocidade*T_G_R/T_G_R_ant;
 				T_G_R_ant=T_G_R;
 				n_rtc=0;
 				//angle.reset();
@@ -553,57 +564,81 @@ double motor::get_wr(double va,double vb,double vc/*double torq_g,double torq_L*
 			{T_G_R = (/*4.313 2.33*/1.436/* 1 0.789*/*4.1/*1.9*/);
 			if (T_G_R_ant!=T_G_R){
 				//wr = wr *T_G_R/T_G_R_ant;
-				w_ref=w_ref *T_G_R/T_G_R_ant;/*end_f*1000/3600*T_G_R/R*/;
+				w_ref_ant=w_ref;
+				w_ref=0;//jan 2019 ;w_ref *T_G_R/T_G_R_ant;/*end_f*1000/3600*T_G_R/R*/;
 			
 				clutch_time=CLUTCH_TIME*1/T;
-				
+				velocidade=velocidade*T_G_R/T_G_R_ant;
 				T_G_R_ant=T_G_R;
 				n_rtc=0;
 				//angle.reset();
 				}
 			}
+				
+		J2=MASSA*R*R/T_G_R/T_G_R;
 		if(e==true){//if driving cycle:
 			if (clutch_time>0){
-				if (clutch_time==CLUTCH_TIME*1/T){
-					this->clutch();}
-				torq_L-=torque_clutch;
+				this->clutch();
+				//torq_L-=torque_clutch;
+				if (clutch_time==1)w_ref=w_ref_ant;	
+				fwref<<FIXED_FLOAT(get_n()*T)<<"clutch_time: "<<clutch_time<<endl;
+						
 				clutch_time--;
 				}
-			if (clutch_time==0){
+			//if (clutch_time==0){
 				//torq_L-=torque_clutch;
 				//clutch_time=clutch_time-3;
-				}
-				
-			Torq_net=torque(va,vb,vc)-torq_L;
-			wr=wr+(Torq_net)*T/(J+R*R*MASSA/(T_G_R*T_G_R));
+			//	}
+			else if (velocidade>0.0 && (velocidade>wr*1.05 || velocidade<wr*0.95))
+					this->clutch();
+					else if (velocidade<0.0 && (velocidade<wr*1.05 || velocidade>wr*0.95))
+					this->clutch();
+				else{
+					Torq_net=Te-torq_L;
+					wr=wr+(Torq_net)*T/(J+J2/*R*R*MASSA/(T_G_R*T_G_R)*/);
+					velocidade=wr;
+					}
+		}
+		else{//if vheicle mode or by load??not sure//T_G_R=1.436*4.1;//TODONEw, test load 3rth
+			if (T_G_R_ant!=T_G_R){
+				//wr = wr *T_G_R/T_G_R_ant;
+				w_ref_ant=w_ref;
+				w_ref=0;//w_ref *T_G_R/T_G_R_ant;/*end_f*1000/3600*T_G_R/R*/;
+			////	clutch_time=CLUTCH_TIME*10000;
+				clutch_time=CLUTCH_TIME*1/T;
+				velocidade=velocidade*T_G_R/T_G_R_ant;
+				T_G_R_ant=T_G_R;
+				n_rtc=0;
+			////	//angle.reset();
 			}
-			else{//if vheicle mode or by load??not sure//T_G_R=1.436*4.1;//TODONEw, test load 3rth
-				if (clutch_time>0){
-					if (clutch_time==CLUTCH_TIME*1/T){
-						this->clutch();}
-						
-					torq_L-=torque_clutch;
-					clutch_time--;	
-					}
-				if (clutch_time==0){
-					//torq_L-=torque_clutch;
-					//clutch_time-=3;
-					}
-			
-				if (T_G_R_ant!=T_G_R){
-					//wr = wr *T_G_R/T_G_R_ant;
-					w_ref=w_ref *T_G_R/T_G_R_ant;/*end_f*1000/3600*T_G_R/R*/;
-				
-					clutch_time=CLUTCH_TIME*10000;
-				
-					T_G_R_ant=T_G_R;
-					n_rtc=0;
-					//angle.reset();
-					}
-				
-				if (T_G_R==0)wr=wr+(torque(va,vb,vc)-torq_L)*T/J;
-				else wr=wr+(torque(va,vb,vc)-torq_L)*T/(J+R*R*MASSA/(T_G_R*T_G_R));
+			if (clutch_time>0){
+				this->clutch();
+				//torq_L-=torque_clutch;
+				clutch_time--;	
+				if (clutch_time==1)w_ref=w_ref_ant;	
+				fwref<<FIXED_FLOAT(get_n()*T)<<"clutch_time: "<<clutch_time<<endl;
+					
 				}
+			//if (clutch_time==0){
+				//torq_L-=torque_clutch;
+				//clutch_time-=3;
+			//	}
+			else {
+				if (T_G_R==0){
+					wr=wr+(Te/*torque(va,vb,vc)-torq_L*/)*T/J;
+					velocidade+=torq_L/J2*T;
+					}
+				else if (velocidade>0.0 && (velocidade>wr*1.05 || velocidade<wr*0.95))
+					this->clutch();
+					else if (velocidade<0.0 && (velocidade<wr*1.05 || velocidade>wr*0.95))
+					this->clutch();
+					else{
+						Torq_net=Te/*torque(va,vb,vc)*/-torq_L;
+						wr=wr+(Torq_net)*T/(J+J2/*R*R*MASSA/(T_G_R*T_G_R)*/);
+						velocidade=wr;
+					}
+			}	
+			}
 		return wr;
 	};
 	
@@ -643,10 +678,10 @@ double motor::get_wr(double va,double vb,double vc/*double torq_g,double torq_L*
 			//torque_control_Max_pid_res=150;
 			vel_Min_pid_res = -400.0;//600 //-300.0//-170.0				//Min value PI out
 			vel_Max_pid_res = 400.0;
-			current_control_y_Min_pid_res=-200.0;//(-(2/3)*300);//100?
-			current_control_y_Max_pid_res=200.0;//((2/3)*300);// 400//100?
-			current_control_x_Min_pid_res=-400.0;//(-(2/3)*300);// (-400)//100?
-			current_control_x_Max_pid_res=400.0;//((2/3)*300);//400//100?
+			current_control_y_Min_pid_res=-10.0;//(-(2/3)*300);//100?
+			current_control_y_Max_pid_res=10.0;//((2/3)*300);// 400//100?
+			current_control_x_Min_pid_res=-250;//-VDC/CONST_SQRT3_/*TODO-250*/;//TODO???-400.0;//(-(2/3)*300);// (-400)//100?
+			current_control_x_Max_pid_res=250;//VDC/CONST_SQRT3_/*TODO250*/;//TODO??400.0;//((2/3)*300);//400//100?
 			vel.tune_pid(vel_p,vel_i,vel_d);/*vector <Rs_Tr> ConstTr(100,Rs_Tr());*/
 			torque_control.tune_pid(torque_control_p,torque_control_i,torque_control_d);
 			current_control_y.tune_pid(current_control_y_p,current_control_y_i,current_control_y_d);
@@ -672,25 +707,17 @@ void control_loops::set_Theta_r(){//set variable theta_r
 };
 void control_loops::get_VDC(float vdc){VDC=vdc;Vmax=VDC/sqrt(3);};//TODO adapt in real
 
-//double control_loops::IDQ_rotor_d(){return IDQ_rotor.d;};
-//double control_loops::IDQ_rotor_q(){return IDQ_rotor.q;};
-//double control_loops::VDQ_rotor_d(){return VDQ_rotor.d;};
-//double control_loops::VDQ_rotor_q(){return VDQ_rotor.q;};
-
-//void control_loops::decouple(){
-	
-//}
 
 	//get_VDQ +++++++++++++++++++++++++++
 tTwoPhase control_loops::get_V(/*const*/ ){
 		
 			//float torque_control_Min_pid_res=-150;//?
 			//float torque_control_Max_pid_res=150;
-			current_control_y_Min_pid_res=-200.0;//(-2.0)/3*VDC;
-			current_control_y_Max_pid_res=200.0;//(2.0/3*VDC);
+			current_control_y_Min_pid_res=-6.45;//6.9;//8.5//(-2.0)/3*VDC;
+			current_control_y_Max_pid_res=6.45;//(2.0/3*VDC);
 			current_control_y.act_min_max(current_control_y_Min_pid_res,current_control_y_Max_pid_res);
-			current_control_x_Min_pid_res=-300;/*imr -255.0*/;//((-2.0)/3*VDC);
-			current_control_x_Max_pid_res=300;//255.0;//(2.0/3*VDC);
+			current_control_x_Min_pid_res=-300.0;//-VDC/CONST_SQRT3_/*TODO-300*/;/*imr -255.0*/;//((-2.0)/3*VDC);
+			current_control_x_Max_pid_res=300.0;//VDC/CONST_SQRT3_/*TODO300*/;//255.0;//(2.0/3*VDC);
 			current_control_x.act_min_max(current_control_x_Min_pid_res,current_control_x_Max_pid_res);
 			//TODO if (n>=("maximum of long")){n=0;}//n nao é necessario na realidade
 			if(n==0){
@@ -773,7 +800,7 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 			//vel.calc_pid();
 
 			torque_control.set_process_point(IDQ.q*Kt/*3/2*np*M*M/Lr*/*angle.get_imr());//TODO isto ta bem?
-			fTorque<<"torque_process_point "<< (IDQ.q*Kt/*3/2*np*M*M/Lr*/*angle.get_imr())<<endl;
+			fTorque<<"torque_process_point: "<< (IDQ.q*Kt/*3/2*np*M*M/Lr*/*angle.get_imr())<<endl;
 			//torque_control.set_setpoint(vel.get_pid_result());   								
 			
 			
@@ -816,7 +843,7 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 					}
 				else {
 					//max Power-speed(voltage) limit region:
-					float Tm3=Kt*(pow((Vmax/(Wm/*r()*np*/*Ls)),2.0)/(2.0*ro));
+					float Tm3=0.9/*cag*/*Kt*(pow((Vmax/(Wm/*r()*np*/*Ls)),2.0)/(2.0*ro));
 					Tm=Tm3;
 					vel.act_min_max(-Tm3,Tm3);
 					vel.calc_pid();		
@@ -844,17 +871,15 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 			torque_control.calc_pid();
 			fTorque<<"torque current error: "<<torque_control.get_current_error()<<"torque pid result: "<<torque_control.get_pid_result()<<endl;
 			
-			//float iqmax=Tm/Kt/angle.get_imr()*0.9/*cag*/;
-			//if (IDQ.q>iqmax)current_control_y.set_process_point(iqmax);
-			//else
-			 current_control_y.set_process_point(IDQ.q);
+			float iqmax=Tm/Kt/angle.get_imr()/*0.97cag*/;
+			
+			if (IDQ.q>iqmax)current_control_y.set_process_point(iqmax);
+			else
+			  current_control_y.set_process_point(IDQ.q);
 			current_control_y.set_setpoint(torque_control.get_pid_result());
 			current_control_y.calc_pid();
 			
-			////flux_control.set_process_point(angle.get_imr());
-			////flux_control.set_setpoint(imrref);//TODO
-			////flux_control.calc_pid();
-			IDQ_d__lma<<FIXED_FLOAT(n*T)<<"sec. IDQ_D_lma:"<<IDQ_d_lma<<endl<<"IDQ_d: "<<IDQ.d<<endl;
+			IDQ_d__lma<<FIXED_FLOAT(n*T)<<"sec.; IDQ_D_lma: "<<IDQ_d_lma<<endl<<"IDQ_d: "<<IDQ.d<<endl;
 			current_control_x.set_process_point(/*angle.get_imr()*/IDQ.d);// i changed: put imr instead IDQd BUT not best
 			current_control_x.set_setpoint(IDQ_d_lma/*flux_control.get_pid_result()*/);//TODO 0.9
 			current_control_x.calc_pid();
@@ -864,20 +889,20 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 			//VDQ.q=current_control_y.get_pid_result(); //							
 			//double VDQq_p=VDQ.q;
 			
-			float iqmax=Tm/Kt/angle.get_imr()*0.95/*cag*/;
-			if (torque_control.get_pid_result()>0 && torque_control.get_pid_result()>iqmax)VDQ.q=iqmax;
-			else if (torque_control.get_pid_result()<0 && torque_control.get_pid_result()<-iqmax)VDQ.q=-iqmax;
-			else
-				VDQ.q=torque_control.get_pid_result();			
+			//float iqmax=Tm/Kt/angle.get_imr()/* *0.99caganco*/;
+			cout<<"iqmax: "<<iqmax;
+			VDQ.q=/*current_control_y.get_pid_result()*/torque_control.get_pid_result();			
+			if (VDQ.q>0 && VDQ.q>iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/))VDQ.q=iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/);
+			else if (VDQ.q<0 && VDQ.q<-iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/))VDQ.q=-iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/);
 			VDQ_ant=VDQ;
 //--------------Rotor Time Constant value adjust:			
 						
 			
-			fIDQ<<FIXED_FLOAT(n*T)<<" sec."<<" VDQ_rfa.d: "<<VDQ_rfa.d<<endl<<" IDQd: "<<IDQd<<" IDQq: "<<IDQq<<endl/*<<"(IDQd^2+IDQq^2)^(1/2): "<<sqrt(IDQd*IDQd+IDQq*IDQq)*//*IDQd+IDQq*/<<"IDC:"<<IDC/*<<"IDC2_3:"<<IDC2_3*/<<endl;
+			fIDQ<<FIXED_FLOAT(n*T)<<" sec.;"<<" VDQ_rfa.d: "<<VDQ_rfa.d<<endl<<" IDQd: "<<IDQd<<" IDQq: "<<IDQq<<endl/*<<"(IDQd^2+IDQq^2)^(1/2): "<<sqrt(IDQd*IDQd+IDQq*IDQq)*//*IDQd+IDQq*/<<"IDC:"<<IDC/*<<"IDC2_3:"<<IDC2_3*/<<endl;
 						
 			
 			//cout<<"VDQ.q:"<<VDQ.q<<endl;
-			fIDQ<<"VDQ.d:"<<VDQ.d<<endl<<"VDQ.q:"<<VDQ.q<<endl;
+			fIDQ<<"VDQ.d :"<<VDQ.d<<endl<<"VDQ.q: "<<VDQ.q<<endl;
 			
 			//if (n>200 && n<100000){Rr*=1.0000022/*1/1.0000002*/;};//TODO remove at end, this is to simulate variations of Tr, the real value influences the gain error
 			
@@ -888,18 +913,18 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 				double error=this->VDQ_rfa.d-(Rs*IDQd-angle.get_wm()*((Ls*Lr-M*M)/Lr)*IDQq);
 				//s/*+*/=error;//dont work:integral controller, work proporcional only but need tune de following numeric value 
 				//double pi_contr=(s)*/*the following value is the gain, adjusted from the rate of change of Rr(Tr=Lr/Rr)*/0.000004/*0.000025*/;
-				if ((IDQq<-10.5*3/*10:maybe more secure 11.5*/ && velocidade<-/*30*/2 ) || (IDQq>10.5*3 && velocidade >2) /*10//-44//-40*//*&& VDQ.q>0*/ /*&& (IDQq <= -100 || IDQq >= 100 )*/){
+				if ((IDQq<-10.5*3/*10:maybe more secure 11.5*/ && wr<-/*30*/2 ) || (IDQq>10.5*3 && wr >2) /*10//-44//-40*//*&& VDQ.q>0*/ /*&& (IDQq <= -100 || IDQq >= 100 )*/){
 				////if (torque_control.get_pid_result()<0){
 				  sinal_=/*-*/1;}
-				  else if((IDQq>10.5*3 && velocidade<-2) || (IDQq<-10.5*3 && velocidade >2 )){sinal_=-1;} 
-						/*else if (IDQq<-10.5 && velocidade >2 ){sinal_=-1;}*//*else if (IDQq>10.5 && velocidade >2){sinal_=1;}*/else{sinal_=0;}
-				//if (velocidade<-30){sinal_*=-1;}else if (velocidade>30){sinal_=1;} else {sinal_=0;};
+				  else if((IDQq>10.5*3 && wr<-2) || (IDQq<-10.5*3 && wr >2 )){sinal_=-1;} 
+						/*else if (IDQq<-10.5 && wr >2 ){sinal_=-1;}*//*else if (IDQq>10.5 && wr >2){sinal_=1;}*/else{sinal_=0;}
+				//if (wr<-30){sinal_*=-1;}else if (wr>30){sinal_=1;} else {sinal_=0;};
 					//TODO vel velref idqq
 				m_Tr_calc_gl=((m_Tr_calc_gl)+sinal_*error*0.000002/*0.000004*//*0.000025*//*pi_contr*/);
 	
-				fIDQ<<" Tr___ "<<m_Tr_calc_gl/*Tr___*/<<" error: "<<error<<endl;
+				fIDQ<<" Tr estimated: "<<m_Tr_calc_gl/*Tr___*/<<" error: "<<error<<endl;
 				}; 
-			fIDQ<<" TR do motor: "<<Lr/Rr<<endl;
+			fIDQ<<" TR of motor: "<<Lr/Rr<<endl;
 			//////stc_p=VDQ.q;
 
 	//part of, used in function decouple			
@@ -923,8 +948,6 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 			wmr1=Wm;
 			
 			wmr_p=dy_nt_(wmr1, wmr__1);
-			
-			//this->decouple();
 
 			const_VDQ_d=/*VDQ.d*//*-wmr_1*Lsro*IDQ.q*//*(this is part of usx, the PI output)+Rs*IDQ_d1*/+(/*(idem previous)Lsro+*/T_lag*Rs)*IDQ_d_p+T_lag*Lsro*IDQ_d_pp-wmr1*(Lsro-T_lag*Rs)*IDQ_q1+wmr1*wmr1*(T_lag*Lsro*IDQ_d1+T_lag*(Ls-Lsro)*abs(angle.get_imr()))/*TODO:modulo imr*/-T_lag*Lsro*IDQ_q1*wmr_p;				
 			const_VDQ_q=/*VDQ.q*//*+wmr_1*Lsro*IDQ_d_p*T_lag*//*(this is part of usy, the PI output)+Lsro*IDQ_q_p*//*-wmr1*T_lag*Lsro*IDQ_d_p*//*(ideyntastic_check_on_open = 1 previous)+Rs*IDQ_q1*/+T_lag*Rs*IDQ_q_p+T_lag*Lsro*IDQ_q_pp+wmr1*(Lsro-T_lag*Rs)*IDQ_d1+wmr1*wmr1*T_lag*Lsro*IDQ_q1+(T_lag*Lsro*IDQ_d1+T_lag*(Ls-Lsro)*abs(angle.get_imr()))*wmr_p+(Ls-Lsro)*wmr1*abs(angle.get_imr());//angle.wmr1*Lsro*IDQ.d+(Ls-Lsro)*wmr1*angle.get_imr();	
@@ -933,18 +956,19 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 			VDQ.q+=const_VDQ_q;
 //-------------			
 			//cout<<"VDQ.d +decoupling:"<<VDQ.d<<endl;
-			;fIDQ<<"VDQ.d +decoupling:"<<VDQ.d<<endl;
+			;fIDQ<<"VDQ.d +decoupling: "<<VDQ.d<<endl;
 			//cout<<"VDQ.q +decoupling:"<<VDQ.q<<endl;
-			;fIDQ<<"VDQ.q +decoupling:"<<VDQ.q<<endl;
+			;fIDQ<<"VDQ.q +decoupling: "<<VDQ.q<<endl;
 			//VDQ.d=VDQ.d-angle.get_wm()*Lsro*IDQ.q;cout<<"VDQD+"<<VDQ.d<<endl;//Rs*IDQ.d-np*2/3*motor::wr*(Lsro+Lrro)*IDQ.q;				
 			//VDQ.q=VDQ.q+angle.get_wm()*Lsro*IDQ.d+(Ls-Lsro)*angle.get_wm()*angle.get_imr();
 
-fImr<<FIXED_FLOAT(n*T)<<"sec. imr:"<<angle.get_imr()/*<<"TTTTTTTTTTTEEEEEEE"<<(3/2*np*M*M/Lr*IDQq*IDQd)*/<<endl;	
+fImr<<FIXED_FLOAT(n*T)<<"sec.; imr (rotor magnetization current): "<<angle.get_imr()/*<<"TTTTTTTTTTTEEEEEEE"<<(3/2*np*M*M/Lr*IDQq*IDQd)*/<<endl;	
 		
 		};
 		n++;//TODO:2-?only is necessary in simulation,can be changed in embedded by flag 1-se n proximo do limite- n=5001; 
 		//timer_Tr++;//to count the periods between Tr read
 		V=InvPark((RotorFluxAngle),VDQ);
+		T1T2<<"get v alpha beta "<<V.alpha<<" "<<V.beta<<"rfa"<<RotorFluxAngle<<endl;
 		//abc_voltage=InvClarke(V);//TODO ??remove in real
 		return V;//voltage to be applied
 	};
