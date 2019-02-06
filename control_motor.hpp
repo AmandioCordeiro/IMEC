@@ -60,8 +60,8 @@ extern tTwoPhase v_;
 extern double velocidade;
 //extern double VDQ_alpha_esc,VDQ_beta_esc;
 extern double T;
-#define Idn 99.0//99//alterei101.0com 105->154 de binario max//129.0//155.0//160.0//150.0//22kw:17.0//15.0//30//TODO
-#define Idmin (71.0)//alterei72 78.75//67.0//80.0//66.0//22kw:12.0//TODO
+#define Idn 103//torq 144:99.0//99//alterei101.0com 105->154 de binario max//129.0//155.0//160.0//150.0//22kw:17.0//15.0//30//TODO
+#define Idmin 71//torq 144:(71.0)//alterei72 78.75//67.0//80.0//66.0//22kw:12.0//TODO
 #define Imax 400.0//meus igbt so sao de 300, 400 é o valor de parametros do relatorio 1pv5135//22kw:200//95//43//TODO
 /*#define*/extern double Tm1;//
 #define TM1 (Kt*Idn*sqrt(Imax*Imax-Idn*Idn))
@@ -75,22 +75,23 @@ extern double vaa,vbb,vcc;
 //#define vel_Min_pid_res -900.0//600 //-300.0//-170.0				//Min value PI out
 //#define vel_Max_pid_res 900.0//600 //300//170.0//360//44//?		//Max value PI out
 /*#define*/extern double vel_cel; //0.04//0.004//8//24//50//(3*4)//(4)//?8					//max aceleration at setpoint
-#define ACCEL 7.7 
+#define ACCEL 100.0/7.0 //100(km/h)/(13 sec.)
 
 /*#define*/extern double torque_control_p;// /*0.000001*/10//3.6//3.6//not added (*2) after introduced the currrent controller/*(4.0*0.7)*///6.0//0.2//1.0//0.6//6//3//(1.0*0.4)//(40*0.19)//0.6///1?
 /*#define*/extern double torque_control_i;// /*0.05*/0.008//0.004//(0.0006*1.2)//0.0006//6.0//0.0006//7.0//0.0000625//(0.000625*0.7/*1.2*/)
 extern double iaa_p,vaa_p,cos_phi,two_phi,desc_p;
 #define torque_control_d 0.0//?
-#define torque_control_Min_pid_res (-175/*VDC/sqrt(3)*/)//? max current or voltage???
-#define torque_control_Max_pid_res 175/*VDC/sqrt(3)*0.95*/
+#define torque_control_Min_pid_res -391// (-175/*VDC/sqrt(3)*/)//? max current or voltage???
+#define torque_control_Max_pid_res 391//175/*VDC/sqrt(3)*0.95*/
 #define torque_control_cel 0.4//alterei0.4 400(300)//?3000
 
-#define current_control_y_p 3//TODO//0.7//10//?//TODO!!!- i tried implement this controller without sucess 
-#define current_control_y_i 0.5//(0.00625)//0.0625//?
+//TODO!!!- i tried implement this controller without sucess:
+#define current_control_y_p 1//TODO//0.7//10//? 
+#define current_control_y_i 0.0005//(0.00625)//0.0625//?
 #define current_control_y_d 0.0//?
 //float current_control_y_Min_pid_res = -2/3*VDC;//100?
 //float current_control_y_Max_pid_res= 2/3*VDC;// 400//100?
-#define current_control_y_cel	300.0// 3000//?
+#define current_control_y_cel	1.0// 3000//?
 
 
 /*#define*/extern double current_control_x_p; /////*0.000001*//*imr 0.8 0.75*/0.6//0.8 1.8 IDQ.d//alterei 1.9//1.92//1.9//2//(0.4)//1//11.0//(6.23*1.11)//0.4//1//0.3//100//5.0//110//5//10//20.0//10//(7)//0.7//10//? 13marco
@@ -99,6 +100,18 @@ extern double iaa_p,vaa_p,cos_phi,two_phi,desc_p;
 //float current_control_x_Min_pid_res = -2/3*VDC;// (-400)//100?
 //float current_control_x_Max_pid_res = 2/3*VDC;//400//100?
 #define current_control_x_cel	0.05//0.06 IDQ.d alterei isto//0.002//.001//?3000
+
+//clutch:
+#define N_P 2 
+#define us 0.15
+#define ud 0.24
+#define fi 1.5
+#define R1 0.074
+#define R2 0.104
+#define XTO_CNT 0.00402
+#define XTO_CLS 0.00778
+#define XTO_MAX 0.012
+#define F_MAX 5000
 
 ofstream fTorque ("torque.txt");
 ofstream fVel ("speed.txt");
@@ -202,7 +215,9 @@ public:
 	//get_VDQ +++++++++++++++++++++++++++
 	tTwoPhase get_V(/*const*/ );
 	void decouple();
+	//void clutch_prim();//prim tentativa, td errado
 	void clutch();
+	
 private:
 
 	_pid vel; 

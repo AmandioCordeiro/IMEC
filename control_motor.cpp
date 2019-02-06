@@ -30,7 +30,7 @@ double T = 0.000125;//0.0001-10khz//TODO: PWM periode 0.000125-8khz
 #define T_lag (0.0000000000000000000001)//0.000000000001*0.02 TODO:?ver tempo de computacao desde que lidos os valores até disparos dos igbts
 double vel_p=20.0;////20.0;//6;//1000;//1;//1//9/ /1.1//(3)//6.0*0.9//(2/*4.5*/)//TODO: speed controller gain 
 double vel_i=0.0006;//0.00006;//TODO: speed controller integral gain 
-double torque_control_p=/*to use current controller 128*//*estava este val em torq_control:0.33,mas experimentei c*/ 1.4;/* e deu bons result.*//*3.6*0.124*/;//alterei*0.5 TODO: torque controller gain
+double torque_control_p=/*to use current controller */128/*estava este val em torq_control:0.33,mas experimentei c 1.4;*//* e deu bons result.*//*3.6*0.124*/;//alterei*0.5 TODO: torque controller gain
 double torque_control_i=0.000008/*alterei0.0009(0.001) 0.008*/;//TODO: torque controller integral gain
 double current_control_x_p=0.54;//0.5 a experiencia tava 0.6
 double current_control_x_i=0.00001;
@@ -72,6 +72,9 @@ double angle_get_wm_T_1=0.0;
 double angle_get_wm_T=0.0;
 double wr_T_1=0.0;
 double wr_T=0.0;
+//speed up code
+#define T_LOAD_1_sec 0.135/T
+
 
 double dy_nt_(double /*&*/y1, double /*&*/y_1){//y1 significa y[n+1] 
 	return ((y1-y_1)/(2*T));};
@@ -680,8 +683,8 @@ double motor::get_wr(double va,double vb,double vc/*double torq_g,double torq_L*
 			vel_Max_pid_res = 400.0;
 			current_control_y_Min_pid_res=-10.0;//(-(2/3)*300);//100?
 			current_control_y_Max_pid_res=10.0;//((2/3)*300);// 400//100?
-			current_control_x_Min_pid_res=-250;//-VDC/CONST_SQRT3_/*TODO-250*/;//TODO???-400.0;//(-(2/3)*300);// (-400)//100?
-			current_control_x_Max_pid_res=250;//VDC/CONST_SQRT3_/*TODO250*/;//TODO??400.0;//((2/3)*300);//400//100?
+			current_control_x_Min_pid_res=-100;//-VDC/CONST_SQRT3_/*TODO-250*/;//TODO???-400.0;//(-(2/3)*300);// (-400)//100?
+			current_control_x_Max_pid_res=100;//VDC/CONST_SQRT3_/*TODO250*/;//TODO??400.0;//((2/3)*300);//400//100?
 			vel.tune_pid(vel_p,vel_i,vel_d);/*vector <Rs_Tr> ConstTr(100,Rs_Tr());*/
 			torque_control.tune_pid(torque_control_p,torque_control_i,torque_control_d);
 			current_control_y.tune_pid(current_control_y_p,current_control_y_i,current_control_y_d);
@@ -716,8 +719,8 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 			current_control_y_Min_pid_res=-6.45;//6.9;//8.5//(-2.0)/3*VDC;
 			current_control_y_Max_pid_res=6.45;//(2.0/3*VDC);
 			current_control_y.act_min_max(current_control_y_Min_pid_res,current_control_y_Max_pid_res);
-			current_control_x_Min_pid_res=-300.0;//-VDC/CONST_SQRT3_/*TODO-300*/;/*imr -255.0*/;//((-2.0)/3*VDC);
-			current_control_x_Max_pid_res=300.0;//VDC/CONST_SQRT3_/*TODO300*/;//255.0;//(2.0/3*VDC);
+			current_control_x_Min_pid_res=-100.0;//-VDC/CONST_SQRT3_/*TODO-300*/;/*imr -255.0*/;//((-2.0)/3*VDC);
+			current_control_x_Max_pid_res=100.0;//VDC/CONST_SQRT3_/*TODO300*/;//255.0;//(2.0/3*VDC);
 			current_control_x.act_min_max(current_control_x_Min_pid_res,current_control_x_Max_pid_res);
 			//TODO if (n>=("maximum of long")){n=0;}//n nao é necessario na realidade
 			if(n==0){
@@ -736,9 +739,8 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 			//	flux_control.calc_pid();
 			current_control_x.init_pid(IDQ.d,/*flux_control.get_pid_result(),TODO*/Idn,current_control_x_Min_pid_res,current_control_x_Max_pid_res ,current_control_x_cel);
 				current_control_x.calc_pid();
-		//cout<<"imrref_"<<imrref<<endl;
 			
-					VDQ.q=torque_control.get_pid_result();//current_control_y.get_pid_result();//cout<<"VDQ.q:"<<VDQ.q<<endl;//se necessario reduzir codigo podesse eliminar vdq?
+					VDQ.q=/*torque_control.get_pid_result();*/current_control_y.get_pid_result();//cout<<"VDQ.q:"<<VDQ.q<<endl;//se necessario reduzir codigo podesse eliminar vdq?
 
 // isd.init_pid(IDQ.d,(90/*-5*w_ref*w_ref*w_ref+56*w_ref*w_ref-209*w_ref+300*/)/*TODO:(30%nominal)*/,current_control_y_Min_pid_res,current_control_y_Max_pid_res ,current_control_y_cel);
 //	current_control_y.calc_pid();
@@ -807,7 +809,7 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 			if(Wm < Wn) 
 				{
 				//max torque limit region:
-				if (n*T<0.135) Tm1=LOAD_1_sec;else Tm1=TM1;//TODO remove T in the final and calc, in real maybe this is limited by batteries//TODO maybe limite set speed 
+				if (n>T_LOAD_1_sec) Tm1=TM1;else Tm1=LOAD_1_sec;//TODO remove T in the final and calc, in real maybe this is limited by batteries//TODO maybe limite set speed 
 				
 						//if(n*T<10)Tm1=200;else Tm1=TM1; //TODO remove at end or adapt
 					 Tm=Tm1;
@@ -884,14 +886,11 @@ tTwoPhase control_loops::get_V(/*const*/ ){
 			current_control_x.set_setpoint(IDQ_d_lma/*flux_control.get_pid_result()*/);//TODO 0.9
 			current_control_x.calc_pid();
 		
-			//double VDQd_p=VDQ.d;
 			VDQ.d=current_control_x.get_pid_result();//because tension is not proporcional of currents, used in controll as currents but after decoupling, tension 											   
-			//VDQ.q=current_control_y.get_pid_result(); //							
-			//double VDQq_p=VDQ.q;
 			
 			//float iqmax=Tm/Kt/angle.get_imr()/* *0.99caganco*/;
 			cout<<"iqmax: "<<iqmax;
-			VDQ.q=/*current_control_y.get_pid_result()*/torque_control.get_pid_result();			
+			VDQ.q=current_control_y.get_pid_result()/*torque_control.get_pid_result()*/;			
 			if (VDQ.q>0 && VDQ.q>iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/))VDQ.q=iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/);
 			else if (VDQ.q<0 && VDQ.q<-iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/))VDQ.q=-iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/);
 			VDQ_ant=VDQ;

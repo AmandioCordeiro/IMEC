@@ -32,6 +32,7 @@ class FOC
 	  _pid vel; 
 	  _pid torque_control;
 	  _pid current_control_x;
+	  _pid current_control_y;
 	  float vel_Min_pid_res;
 	  float vel_Max_pid_res;
   	  tTwoPhaseDQ IDQ, VDQ;

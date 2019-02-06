@@ -28,7 +28,7 @@ using namespace Maths;
 #define SQRT3           FP_FROMFLT(1.732050807568877293527446315059)
 
 #define T 0.000125//8khz? sample period
-#define T_lag (0.000000001)//? TODO: time since read values until apply PWM 
+#define T_lag (0.000000001)//? TODO_: time since read values until apply PWM 
 
 #define vel_p 20.0 	//?
 #define vel_i 0.0006 //?
@@ -36,14 +36,22 @@ using namespace Maths;
 //#define vel_Min_pid_res -300.0//?		//Min value PI out
 //#define vel_Max_pid_res 300.0//?		//Max value PI out
 //#define ACCEL 7.7 //7.7km/h per sec
-#define vel_cel 0.01//?					//max aceleration at setpoint
+#define vel_cel 0.02//?					//max aceleration at setpoint
 
-#define torque_control_p 1.4//0.33//3.6// ?
+#define torque_control_p 128//without current control_y 1.4//0.33//3.6// ?
 #define torque_control_i 0.000008//0.01// ?
 #define torque_control_d 0.0/
-#define torque_control_Min_pid_res (-175)//?
-#define torque_control_Max_pid_res 175//?
+#define torque_control_Min_pid_res -391//?
+#define torque_control_Max_pid_res 391//?
 #define torque_control_cel 0.4//400.0//?
+
+#define current_control_y_p 1//TODO//0.7//10//? 
+#define current_control_y_i 0.0005//(0.00625)//0.0625//?
+#define current_control_y_d 0.0//?
+#define current_control_y_Min_pid_res -6.45
+#define current_control_y_Max_pid_res 6.45
+#define current_control_y_cel	1.0// 3000//?
+
 
 #define current_control_x_p 0.54//1.9//? 
 #define current_control_x_i 0.00001//0.001//?
@@ -61,14 +69,16 @@ using namespace Maths;
 #define Idmin (71.0)
 #define Tr 0.252308//? (Lr/Rr)
 #define Rs 0.012//?
-#define Rm 650.0//? represent eddy currents. TODO don't know this value
+#define Rm 650.0//? represent eddy currents. TODO_ don't know this value
 #define ro (1.0-(M*M)/(Ls*Lr))
 #define Imax 400.0//? max igbt current
 
-#define Kt (3.0/2.0*np*M*M/Lr)
+#define KT (3.0/2.0*np*M*M/Lr)
 #define TM1 (Kt*Idn*sqrt(Imax*Imax-Idn*Idn))
 #define LOAD_1_sec 13//? to limit initial current setpoint torque to this
-
+//speed up code
+#define T_LOAD_1_sec 0.135/T
+#define KT_t_cag 0.9*KT
 long n=0;
 
 
@@ -78,6 +88,7 @@ static const s32fp sqrt3inv2 = 2*sqrt3inv1; //2/sqrt(2)
 static const s32fp sqrt3ov2 = (SQRT3 / 2);
 static const s32fp sqrt32 = FP_FROMFLT(1.224744871); //sqrt(3/2)
 static int dir = 1;
+
 
 s32fp FOC::id;
 s32fp FOC::iq;
@@ -130,12 +141,12 @@ float d2y_nt_(float /*&*/y1, float /*&*/y,float /*&*/y_1){//derived can only be 
 
 float max_mod_v_ref=0.0;
 float ang=0.0;
+float ang_u=0.0;
 void calc_max_mod_v_ref(tTwoPhase v_bi){
 ang=atan2(v_bi.beta,v_bi.alpha);
 
-	//cout<<"angulo"<<ang<<endl;
-	
-	double ang_u = 0.0;
+	//double ang_u=0.0;
+
 	//if (ang>=0&&ang<(PI/6))
 	//	ang_u = ang - PI/6;//gives negative
 	//else if (ang>=PI/6 && ang<(PI/3))
@@ -176,9 +187,22 @@ FOC::FOC():VDQ_ant(0.0),const_VDQ_d(0.0),const_VDQ_q(0.0),RotorFluxAngle(0.0),an
 
 FOC::~FOC(){};
 
+float Wm = 0.0;	
+float Rd_we=0.0;
+float Rq_we=0.0;
+float IDQ_d_lma=0.0;// rotor magnetization current
+			
+float Wn = 0.0;
+float Wc = 0.0;	
+float Tm=0.0;
+float Tm2=0.0;
+float Tm3=0.0;
+float iqmax=0.0;
+float error=0.0;
+int sinal_=0.0;
 void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded rotor speed*/, float wr/*rotor speed*/)
 {
-	Vmax = VDC/sqrt(3);
+	Vmax = VDC/SQRT3;
 	
 	il3 = -il1 -il2;//if system simetric
 	
@@ -202,9 +226,12 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 				vel.calc_pid();
 			 torque_control.init_pid(IDQ.q*3.0/2.0*np*M*M/Lr*angle.get_imr()/*IDQ.q*/,vel.get_pid_result(),torque_control_Min_pid_res,torque_control_Max_pid_res ,torque_control_cel);
 				torque_control.calc_pid();
+			 current_control_y.init_pid(IDQ.q,torque_control.get_pid_result(),current_control_y_Min_pid_res,current_control_y_Max_pid_res ,current_control_y_cel);
+				current_control_y.calc_pid();	
+			
 			current_control_x.init_pid(IDQ.d,/*TODO*/Idn,current_control_x_Min_pid_res,current_control_x_Max_pid_res ,current_control_x_cel);
 				current_control_x.calc_pid();
-			VDQ.q=torque_control.get_pid_result();
+			VDQ.q=current_control_y.get_pid_result();//torque_control.get_pid_result();
 			VDQ.d=current_control_x.get_pid_result();
 			
 			//+Vdecouple-------------			
@@ -220,30 +247,31 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 	
 			//the following variables are used to calc rotor time constant (adapt value at change).
 			abc_voltage_svpwm.a=vaa;abc_voltage_svpwm.b=vbb;abc_voltage_svpwm.c=vcc;
+			//TODO_: the following i dont know if its needed measure or just use the previous applied
 			VDQ_rtc=ClarkePark(RotorFluxAngle,abc_voltage_svpwm);		
-			int sinal_=1;
+			/*int*/ sinal_=1;
 			
 			//to get Rotor flux angle:
-			RotorFluxAngle=angle.RotFluxAng_(IDQ.q,IDQ.d,T,Tr_calc,wr*np);	//TODO T_lag or Tpwm?	
-			//RotorFluxAngle=RotorFluxAngle;//TODO:-PI/2 remove? in simulation doesn't work but in real i think it's needed??
+			RotorFluxAngle=angle.RotFluxAng_(IDQ.q,IDQ.d,T,Tr_calc,wr*np);		
+			//RotorFluxAngle-=PI/2;//TODO_:-PI/2 remove? in simulation doesn't work but in real i think it's needed??
 			
 		//PIDs------------------------------------------- To get Voltage direct and quadracture before decoupling: 
-			float Wm = angle.get_wm();//Wm == we, used in LMA, sincronous speed, aten.- electric speed- ..*number pole pairs	
-			float Rd_we=Rs+Wm*Wm*M*M/Rm;
-			float Rq_we=Rs+1.0/(Tr_calc*Lr)*M*M+Wm*Wm*M*M*Llr*Llr/Rm/Lr/Lr;
-			float IDQ_d_lma=0.0;// rotor magnetization current
+			Wm = angle.get_wm();//Wm == we, used in LMA, sincronous speed, aten.- electric speed- ..*number pole pairs	
+			Rd_we=Rs+Wm*Wm*M*M/Rm;
+			Rq_we=Rs+1.0/(Tr_calc*Lr)*M*M+Wm*Wm*M*M*Llr*Llr/Rm/Lr/Lr;
+			IDQ_d_lma=0.0;// rotor magnetization current
 			
 			vel.set_process_point(wr);			
 			vel.set_setpoint(w_ref);
 			
 			torque_control.set_process_point(IDQ.q*Kt*angle.get_imr());
-			float Wn = Vmax/(Ls*sqrt(Idn*Idn+ro*ro*(Imax*Imax-Idn*Idn)));
-			float Wc = Vmax/(Imax*Ls)*sqrt((ro*ro+1.0)/(2.0*ro*ro));//TODO acrescentar 0.9??
-			float Tm;
+			Wn = Vmax/(Ls*sqrt(Idn*Idn+ro*ro*(Imax*Imax-Idn*Idn)));
+			Wc = Vmax/(Imax*Ls)*sqrt((ro*ro+1.0)/(2.0*ro*ro));
+			Tm;
 			if(Wm < Wn) 
 				{
 				//max torque limit region:
-				if (n*T<0.135) Tm1=LOAD_1_sec;else Tm1=TM1;//TODO remove T in the final and calc, in real maybe this is limited by batteries//TODO maybe limite set speed 
+				if (n>T_LOAD_1_sec) Tm1=TM1;else Tm1=LOAD_1_sec;//TODO remove T in the final and calc, in real maybe this is limited by batteries//maybe limite set speed 
 					 Tm=Tm1;
 					 vel.act_min_max(-Tm1,Tm1);
 					 vel.calc_pid();		
@@ -256,7 +284,7 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 				}
 			else {if (Wm < Wc ){
 					//max current(power) limit region:
-					float Tm2=Kt*sqrt(pow(Vmax/(Wm*Ls),2.0)-Imax*Imax*ro*ro)*sqrt(Imax*Imax-pow(Vmax/(Wm*Ls),2.0))/(1.0-ro*ro);
+					Tm2=Kt*sqrt(pow(Vmax/(Wm*Ls),2.0)-Imax*Imax*ro*ro)*sqrt(Imax*Imax-pow(Vmax/(Wm*Ls),2.0))/(1.0-ro*ro);
 					Tm=Tm2;
 					vel.act_min_max(-Tm2,Tm2);
 					vel.calc_pid();		
@@ -269,7 +297,7 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 					}
 				else {
 					//max Power-speed(voltage) limit region:
-					float Tm3=Kt*(pow((Vmax/(Wm*Ls)),2.0)/(2.0*ro));
+					Tm3=KT_t_cag*(pow((Vmax/(Wm*Ls)),2.0)/(2.0*ro));
 					Tm=Tm3;
 					vel.act_min_max(-Tm3,Tm3);
 					vel.calc_pid();		
@@ -286,14 +314,21 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 			torque_control.set_setpoint(vel.get_pid_result());
 			torque_control.calc_pid();
 			
+			iqmax=Tm/Kt/angle.get_imr()/*0.97cag*/;
+			if (IDQ.q>iqmax)current_control_y.set_process_point(iqmax);
+			else
+			  current_control_y.set_process_point(IDQ.q);
+			current_control_y.set_setpoint(torque_control.get_pid_result());
+			current_control_y.calc_pid();
+			
+			
 			current_control_x.set_process_point(/*angle.get_imr()*/IDQ.d);// i changed: put imr instead IDQd BUT not best
 			current_control_x.set_setpoint(IDQ_d_lma);
 			current_control_x.calc_pid();
 		
 			VDQ.d=current_control_x.get_pid_result();//because tension is not proporcional of currents, used in controll as currents but after decoupling, tension because is a Voltage source inverter 											   
 			
-			float iqmax=Tm/Kt/angle.get_imr()/*0.95cag*/;
-			VDQ.q=/*current_control_y.get_pid_result()*/torque_control.get_pid_result();			
+			VDQ.q=current_control_y.get_pid_result()/*torque_control.get_pid_result()*/;			
 			if (VDQ.q>0 && VDQ.q>iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/))VDQ.q=iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/);
 			else if (VDQ.q<0 && VDQ.q<-iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/))VDQ.q=-iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/);
 			
@@ -430,9 +465,10 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
   //------
    	
 	//--------------Rotor Time Constant value adjust:			
-			if (n_rtc<90000)n_rtc++;
-			if (n_rtc>70000 ) {// TODO				
-				float error = VDQ_rtc.d-(Rs*IDQ.d-angle.get_wm()*((Ls*Lr-M*M)/Lr)*IDQ.q);
+			if (n_rtc<90000)n_rtc++;//TODO needed or just use n. In simulation i made reset when changed gear
+			if (n_rtc>70000 ) {// TODO	
+							
+				/*float*/ error = VDQ_rtc.d-(Rs*IDQ.d-angle.get_wm()*((Ls*Lr-M*M)/Lr)*IDQ.q);
 				
 				//the following is because it dont work at 0 power 0 speed: 
 				if ((IDQ.q<-10.5*3 && wr<-/*30*/4 ) || (IDQ.q>10.5*3 && wr >4) ){
@@ -441,7 +477,7 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded 
 						sinal_=-1;} 
 						else{ sinal_=0;}
 						
-				Tr_calc=(Tr_calc + sinal_*error*0.000002/*0.000025*//*pi_contr*/);//TODO tune numeric value to rate of change Rr
+				Tr_calc=(Tr_calc + sinal_*error*0.000002/*0.000025*//*pi_contr*/);//TODO_ tune numeric value to rate of change Rr
 				} 
 	//--------------			
 				
