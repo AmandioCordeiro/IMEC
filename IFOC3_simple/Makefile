@@ -1,29 +1,29 @@
-#Makefile
-CC=g++
-CFLAGS= -g  --std=c++11  
+# Especifica o compilador
+CC      = g++
 
-default: Ind_motor_sim
+# Especifica as opções do compilador
+CFLAGS  = -g 
+#LDFLAGS = -L/usr/openwin/lib
+#LDLIBS  = -lX11 -lXext
 
-Ind_motor_sim: foc.o ClarkeParkTransforms.o Rot_Flux_Ang.o tpid_class.o IFOC_3_console_interface.o
-	$(CC) $(CFLAGS) -o Ind_motor_sim foc.o ClarkeParkTransforms.o Rot_Flux_Ang.o tpid_class.o IFOC_3_console_interface.o 
-	
-Ifoc_3_console_interface.o:	IFOC_3_console_interface.cpp ClarkeParkTransforms.cpp Rot_Flux_Ang.hpp tpid_class.h foc.hpp
-	 $(CC) $(CFLAGS) -c Ifoc_3_console_interface.cpp  
+# Necessário para reconhecer .cpp como uma extensão de ficheiro (arquivo)
+.SUFFIXES: $(SUFFIXES) .cpp
 
-foc.o:	foc.hpp ClarkeParkTransforms.cpp  Rot_Flux_Ang.cpp Rot_Flux_Ang.hpp  tpid_class.cpp tpid_class.h
-	$(CC) $(CFLAGS) -c foc.cpp 
+# Nome do executável
+PROG  = Induc_motor
 
-#filter_rtc.o:	filter_rtc.cpp filter_rtc.hpp
-#	$(CC) $(CFLAGS) -c filter_rtc.cpp
+# Lista dos ficheiros (arquivos) objetos necessários para o programa final
+OBJS  = foc.o ClarkeParkTransforms.o Rot_Flux_Ang.o tpid_class.o IFOC_3_cons_interf.o
+#main.o window.o Board.o Life.o BoundedBoard.o
+ 
+all: $(PROG)
 
-ClarkeParkTransforms.o:	ClarkeParkTransforms.cpp
-	$(CC) $(CFLAGS) -c ClarkeParkTransforms.cpp
+# Compilação do programa e passos das ligações de dependências
+$(PROG): $(OBJS)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(LDLIBS) -o $(PROG) $(OBJS)
 
-Rot_Flux_Ang.o: Rot_Flux_Ang.hpp
-	$(CC) $(CFLAGS) -c Rot_Flux_Ang.cpp
-
-tpid_class.o: tpid_class.h
-	$(CC) $(CFLAGS) -c tpid_class.cpp
+.cpp.o:
+	$(CC) $(CFLAGS) -c $*.cpp
 
 clean:
 	$(RM)	Ind_motor_sim  *.o *~

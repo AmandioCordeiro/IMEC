@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#define CST_DIGITS 15
+//#define CST_DIGITS 15
 //#include "my_fp.h"
 //#include "my_math.h"
 #include "foc.hpp"
@@ -103,6 +103,7 @@ float IDQ_d_lma=Idn;// rotor magnetization current
 float Tm=0.0;
 float Tm2=0.0;
 float Tm3=0.0;
+float Tm1=0.0;
 float iqmax=0.0;
 float error=0.0;
 int sinal_=0.0;
@@ -113,7 +114,8 @@ float vaa=0.0,vbb=0.0,vcc=0.0;
 long n=0;
 float ids=0.0, iqs=0.0;
 float VDC;
-
+float Vmax;
+//TODO remove at end the folloving block, replace for defines
 float vel_p=20.0;////20.0;//6;//1000;//1;//1//9/ /1.1//(3)//6.0*0.9//(2/*4.5*/)//TODO: speed controller gain 
 float vel_i=0.0006;//0.00006;//TODO: speed controller integral gain 
 float torque_control_p=/*to use current controller */128/*estava este val em torq_control:0.33,mas experimentei c 1.4;*//* e deu bons result.*//*3.6*0.124*/;//alterei*0.5 TODO: torque controller gain
@@ -121,10 +123,11 @@ float torque_control_i=0.000008/*alterei0.0009(0.001) 0.008*/;//TODO: torque con
 float current_control_x_p=0.54;//0.5 a experiencia tava 0.6
 float current_control_x_i=0.00001;
 
-float Tm1;
-
 float Lsro=(ro*Ls);//0.00081261//TODO make define
 
+float RotorFluxAngle=0.0;
+
+tThreePhase abc_current(0.0,0.0,0.0);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 float dy_nt_(float /*&*/y1, float /*&*/y_1){//y1 significa y[n+1] 
@@ -176,9 +179,17 @@ ang=atan2(v_bi.beta,v_bi.alpha);
 					
 	max_mod_v_ref = VDC/(cos(ang_u)*CONST_SQRT3_);//TODO uncoment in the end cos for max 
 };
+float FOC::get_VDC(){//TODO implement in real
+	VDC=VDC_BAT;
+	Vmax=VDC/CONST_SQRT3_;
+	return VDC;};
 
-FOC::FOC():abc_voltage_svpwm(0.0,0.0,0.0),n_rtc(0),VDQ_ant(0.0,0.0),const_VDQ_d(0.0),const_VDQ_q(0.0),RotorFluxAngle(0.0)/*,angle(0.0)*/,abc_current(0.0,0.0,0.0),vel_Min_pid_res(-300),vel_Max_pid_res(300),IDQ(0.0,0.0),VDQ(0.0,0.0),IDQ_d_1(0.0),IDQ_d_(0.0),IDQ_d1(0.0),IDQ_d_p(0.0),IDQ_d_pp(0.0),IDQ_q_1(0.0),IDQ_q_(0.0),IDQ_q1(0.0),IDQ_q_p(0.0),IDQ_q_pp(0.0),wmr_(0.0),wmr1(0.0),wmr_p(0.0),v(0.0,0.0)/*,vaa(0.0),vbb(0.0),vcc(0.0)*/,Tr_calc(Tr),VDQ_rtc(0.0,0.0){
-	vel.init_pid(0.0/*wr_*/,/*w_ref*/0.0,vel_Min_pid_res,vel_Max_pid_res ,vel_cel);//insirir val em tune...
+FOC::FOC():abc_voltage_svpwm(0.0,0.0,0.0),n_rtc(0),VDQ_ant(0.0,0.0),const_VDQ_d(0.0),const_VDQ_q(0.0)/*,angle(0.0)*//*,abc_current(0.0,0.0,0.0)*/,vel_Min_pid_res(-300),vel_Max_pid_res(300),IDQ(0.0,0.0),VDQ(0.0,0.0),IDQ_d_1(0.0),IDQ_d_(0.0),IDQ_d1(0.0),IDQ_d_p(0.0),IDQ_d_pp(0.0),IDQ_q_1(0.0),IDQ_q_(0.0),IDQ_q1(0.0),IDQ_q_p(0.0),IDQ_q_pp(0.0),wmr_(0.0),wmr1(0.0),wmr_p(0.0),v(0.0,0.0)/*,vaa(0.0),vbb(0.0),vcc(0.0)*/,Tr_calc(Tr),VDQ_rtc(0.0,0.0){
+	get_VDC();
+	Wn = (Vmax/(Ls*sqrt(Idn*Idn+ro*ro*(Imax*Imax-Idn*Idn))));
+	Wc = /*0.98**/Vmax/(Imax*Ls)*sqrt((ro*ro+1.0)/(2.0*ro*ro));//TODO acrescentei 0.9??
+	
+	vel.init_pid(0.0/*wr_*/,/*w_ref TODO put 0.0 at end*/752,vel_Min_pid_res,vel_Max_pid_res ,vel_cel);//insirir val em tune...
 	vel.tune_pid(vel_p,vel_i,vel_d);/*vector <Rs_Tr> ConstTr(100,Rs_Tr());*/
 
 			//	vel.calc_pid();
@@ -197,12 +208,12 @@ FOC::FOC():abc_voltage_svpwm(0.0,0.0,0.0),n_rtc(0),VDQ_ant(0.0,0.0),const_VDQ_d(
 	};
 
 
-void FOC::vel_tune_pid(){vel.tune_pid(vel_p,vel_i,vel_d);};
-void FOC::torque_control_tune_pid(){torque_control.tune_pid(torque_control_p,torque_control_i,torque_control_d);};
+//void FOC::vel_tune_pid(){vel.tune_pid(vel_p,vel_i,vel_d);};
+//void FOC::torque_control_tune_pid(){torque_control.tune_pid(torque_control_p,torque_control_i,torque_control_d);};
 
 void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*commanded rotor speed*/, float wr_/*rotor speed*/)
 {	
-	Vmax = VDC/CONST_SQRT3_;
+	//Vmax = VDC/CONST_SQRT3_;
 	
 	il3 = -il1 -il2;//if system simetric
 	
@@ -222,11 +233,11 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 			
 	if(n==0){//first iteration
 			//PIDs----------------------			
-			 //vel.init_pid(wr_,w_ref,vel_Min_pid_res,vel_Max_pid_res ,vel_cel);//insirir val em tune...
+	//		 vel.init_pid(wr_,w_ref,vel_Min_pid_res,vel_Max_pid_res ,vel_cel);//insirir val em tune...
 				vel.calc_pid();
-			 //torque_control.init_pid(IDQ.q*3.0/2.0*np*M*M/Lr*angle.get_imr()/*IDQ.q*/,vel.get_pid_result(),torque_control_Min_pid_res,torque_control_Max_pid_res ,torque_control_cel);
+		//	 torque_control.init_pid(IDQ.q*3.0/2.0*np*M*M/Lr*angle.get_imr()/*IDQ.q*/,vel.get_pid_result(),torque_control_Min_pid_res,torque_control_Max_pid_res ,torque_control_cel);
 				torque_control.calc_pid();
-			 //current_control_y.init_pid(IDQ.q,torque_control.get_pid_result(),current_control_y_Min_pid_res,current_control_y_Max_pid_res ,current_control_y_cel);
+			// current_control_y.init_pid(IDQ.q,torque_control.get_pid_result(),current_control_y_Min_pid_res,current_control_y_Max_pid_res ,current_control_y_cel);
 				current_control_y.calc_pid();	
 			
 			//current_control_x.init_pid(IDQ.d,/*TODO*/Idn,current_control_x_Min_pid_res,current_control_x_Max_pid_res ,current_control_x_cel);
@@ -241,10 +252,13 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 			IDQ_q1=IDQ.q;
 			wmr1=angle.get_wm();
 			}
-	else{
-		
+	else{		vel.tune_pid(vel_p,vel_i,vel_d);/*vector <Rs_Tr> ConstTr(100,Rs_Tr());*///TODO remove at end
+				torque_control.tune_pid(torque_control_p,torque_control_i,torque_control_d);//TODO remove at end
+				current_control_y.tune_pid(current_control_y_p,current_control_y_i,current_control_y_d);//TODO remove at end
+				current_control_x.tune_pid(current_control_x_p,current_control_x_i,current_control_x_d);//TODO remove at end
+	
 			abc_current.a = il1;abc_current.b = il2;abc_current.c = il3;
-			
+			T1T2<<abc_current.a<<" "<<IDQ.q<<" "<<IDQ.d<<" "<<T<<" "<<Tr_calc<<" "<<(wr_*np)<<endl;
 			IDQ=ClarkePark(RotorFluxAngle,abc_current);
 	
 			//the following variables are used to calc rotor time constant (adapt value at change).
@@ -254,10 +268,12 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 			/*int*/ sinal_=1;
 			
 			//to get Rotor flux angle:
-			RotorFluxAngle=angle.RotFluxAng_(IDQ.q,IDQ.d,T,Tr_calc,wr_*np);		
+			RotorFluxAngle=FOC::angle.RotFluxAng_(IDQ.q,IDQ.d,T,Tr_calc,wr_*np);		
 			//RotorFluxAngle-=PI/2;//TODO_:-PI/2 remove? in simulation doesn't work but in real i think it's needed??
 			
 		//PIDs------------------------------------------- To get Voltage direct and quadracture before decoupling: 
+			Wn = (Vmax/(Ls*sqrt(Idn*Idn+ro*ro*(Imax*Imax-Idn*Idn))));
+			Wc = /*0.98**/Vmax/(Imax*Ls)*sqrt((ro*ro+1.0)/(2.0*ro*ro));//TODO acrescentei 0.9??
 			Wm = angle.get_wm();//Wm == we, used in LMA, sincronous speed, aten.- electric speed- ..*number pole pairs	
 			Rd_we=Rs+Wm*Wm*M*M/Rm;
 			Rq_we=Rs+1.0/(Tr_calc*Lr)*M*M+Wm*Wm*M*M*Llr*Llr/Rm/Lr/Lr;
@@ -295,7 +311,7 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 					vel.act_min_max(-Tm2,Tm2);
 					vel.calc_pid();		
 						fTorque<<"vel current error: "<<vel.get_current_error()<<"vel pid result: "<<vel.get_pid_result()<<endl;//TODO remove at end
-						fTorque<<"<Wc: "<<Wc<<endl;//TODO remove at end
+						fTorque<<"<Wc: "<<Wc<<"<Wm: "<<Wm<<endl;//TODO remove at end
 						fTorque<<"Tm2: "<<Tm2<<endl;//TODO remove at end
 					if(abs(IDQ.q)<=Vmax/(Wm*Ls*ro)/sqrt(pow(ro,-2.0)+Rd_we/Rq_we)*sqrt(Rd_we/Rq_we))
 						{IDQ_d_lma=sqrt(Rq_we/Rd_we)*abs(IDQ.q);
@@ -305,7 +321,7 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 					}
 				else {
 					//max Power-speed(voltage) limit region:
-					Tm3=KT_t_cag*(pow((Vmax/(Wm*Ls)),2.0)/(2.0*ro));
+					Tm3=0.9*/*cag*/KT_t_cag*(pow((Vmax/(Wm*Ls)),2.0)/(2.0*ro));
 					Tm=Tm3;
 					vel.act_min_max(-Tm3,Tm3);
 					vel.calc_pid();		
@@ -324,38 +340,42 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 			if ((IDQ_d_lma<Idmin) || isnanf(IDQ_d_lma)) IDQ_d_lma=Idmin;
 			
 				fTorque << "tc_ref:  "<< vel.get_pid_result() <<endl;//TODO remove at end
-
-			
+			iqmax=Tm/KT/angle.get_imr()/*0.97cag*/;
+			torque_control.act_min_max(-iqmax,iqmax);
 			torque_control.set_setpoint(vel.get_pid_result());
 			torque_control.calc_pid();
 				fTorque<<"torque current error: "<<torque_control.get_current_error()<<"torque pid result: "<<torque_control.get_pid_result()<<endl;//TODO remove at end
 
-			iqmax=Tm/KT/angle.get_imr()/*0.97cag*/;
-			if (IDQ.q>iqmax)current_control_y.set_process_point(iqmax);
-			else
+			//wrong if (IDQ.q>iqmax)current_control_y.set_process_point(iqmax);
+			//else
 			  current_control_y.set_process_point(IDQ.q);
 			current_control_y.set_setpoint(torque_control.get_pid_result());
 			current_control_y.calc_pid();
-			
-						IDQ_d__lma<<FIXED_FLOAT(n*T)<<"sec.; IDQ_D_lma: "<<IDQ_d_lma<<endl<<"IDQ_d: "<<IDQ.d<<endl;//TODO remove at end
 
+						fTorque<<"current_control_y current error: "<<current_control_y.get_current_error()<<"current_control_y pid result: "<<current_control_y.get_pid_result()<<endl;//TODO remove at end
+						IDQ_d__lma<<FIXED_FLOAT(n*T)<<"sec.; IDQ_D_lma: "<<IDQ_d_lma<<endl<<"IDQ_d: "<<IDQ.d<<endl;//TODO remove at end
 			
 			current_control_x.set_process_point(/*angle.get_imr()*/IDQ.d);// i changed: put imr instead IDQd BUT not best
 			current_control_x.set_setpoint(IDQ_d_lma);
 			current_control_x.calc_pid();
-		
+						fTorque<<"current_control_x current error: "<<current_control_x.get_current_error()<<"current_control_x pid result: "<<current_control_x.get_pid_result()<<endl;//TODO remove at end
+						
 			VDQ.d=current_control_x.get_pid_result();//because tension is not proporcional of currents, used in controll as currents but after decoupling, tension because is a Voltage source inverter 											   
 						cout<<"iqmax: "<<iqmax;//TODO remove at end
 
 			VDQ.q=current_control_y.get_pid_result()/*torque_control.get_pid_result()*/;			
-			if (VDQ.q>0 && VDQ.q>iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/))VDQ.q=iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/);
-			else if (VDQ.q<0 && VDQ.q<-iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/))VDQ.q=-iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/);
+			if (VDQ.q>0 && VDQ.q>iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/))
+				VDQ.q=iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/);
+			else if (VDQ.q<0 && VDQ.q<-iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/))
+				VDQ.q=-iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/);
 			
 			/*here*/
-			VDQ_ant=VDQ;
+			//VDQ_ant=VDQ;//not used
 						fIDQ<<FIXED_FLOAT(n*T)<<" sec.;"<<" VDQ_rfa.d: "<<VDQ_rtc.d<<endl<<" IDQd: "<<IDQ.d<<" IDQq: "<<IDQ.q<<endl/*<<"(IDQd^2+IDQq^2)^(1/2): "<<sqrt(IDQd*IDQd+IDQq*IDQq)*//*IDQd+IDQq*/<<"IDC:"<<IDC/*<<"IDC2_3:"<<IDC2_3*/<<endl;//TODO remove at end
+				fIDQ<<"VDQ.d :"<<VDQ.d<<endl<<"VDQ.q: "<<VDQ.q<<endl;//TODO remove at end
+				fTorque<<FIXED_FLOAT(n*T)<<" sec.;"<<" VDQ_rfa.d: "<<VDQ_rtc.d<<endl<<" IDQd: "<<IDQ.d<<" IDQq: "<<IDQ.q<<endl/*<<"(IDQd^2+IDQq^2)^(1/2): "<<sqrt(IDQd*IDQd+IDQq*IDQq)*//*IDQd+IDQq*/<<"IDC:"<<IDC/*<<"IDC2_3:"<<IDC2_3*/<<endl<<"VDQ.d :"<<VDQ.d<<endl<<"VDQ.q: "<<VDQ.q<<endl;//TODO remove at end
 
-		}
+		//}
 		
 	//+Vdecouple-------------To get Voltage direct and quadracture after decoupling	
 			IDQ_d_1=IDQ_d_;
@@ -381,26 +401,29 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 			/*VDQ.d=VDQ.d+*/const_VDQ_d=(T_lag*Rs)*IDQ_d_p+T_lag*Lsro*IDQ_d_pp-wmr1*(Lsro-T_lag*Rs)*IDQ_q1+wmr1*wmr1*(T_lag*Lsro*IDQ_d1+T_lag*(Ls-Lsro)*abs(angle.get_imr()))-T_lag*Lsro*IDQ_q1*wmr_p;				
 			/*VDQ.q=VDQ.q+*/const_VDQ_q=T_lag*Rs*IDQ_q_p+T_lag*Lsro*IDQ_q_pp+wmr1*(Lsro-T_lag*Rs)*IDQ_d1+wmr1*wmr1*T_lag*Lsro*IDQ_q1+(T_lag*Lsro*IDQ_d1+T_lag*(Ls-Lsro)*abs(angle.get_imr()))*wmr_p+(Ls-Lsro)*wmr1*abs(angle.get_imr());
 			
-			//if ( /*VDQ.q > 0 && */VDQ.q > VDC/sqrt(3)*0.96 ) VDQ.q = VDC/sqrt(3)*0.96;
-			//else if ( /*VDQ.q < 0 && */VDQ.q < -VDC/sqrt(3)*0.96 ) VDQ.q = -VDC/sqrt(3)*0.96;
 			VDQ.d+=const_VDQ_d;
 			VDQ.q+=const_VDQ_q;
-				fIDQ<<"VDQ.d +decoupling: "<<VDQ.d<<endl;
-				fIDQ<<"VDQ.q +decoupling: "<<VDQ.q<<endl;
-
-				fImr<<FIXED_FLOAT(n*T)<<"sec.; imr (rotor magnetization current): "<<angle.get_imr()/*<<"TTTTTTTTTTTEEEEEEE"<<(3/2*np*M*M/Lr*IDQq*IDQd)*/<<endl;	
-		
+				
+				fIDQ<<"VDQ.d +decoupling: "<<VDQ.d<<endl;//TODO remove at end
+				fIDQ<<"VDQ.q +decoupling: "<<VDQ.q<<endl;//TODO remove at end
+				fImr<<FIXED_FLOAT(n*T)<<"sec.; imr (rotor magnetization current): "<<angle.get_imr()/*<<"TTTTTTTTTTTEEEEEEE"<<(3/2*np*M*M/Lr*IDQq*IDQd)*/<<endl;//TODO remove at end	
+				fTorque<<"VDQ.d +decoupling: "<<VDQ.d<<endl<<"VDQ.q +decoupling: "<<VDQ.q<<endl<<FIXED_FLOAT(n*T)<<"sec.; imr (rotor magnetization current): "<<angle.get_imr()/*<<"TTTTTTTTTTTEEEEEEE"<<(3/2*np*M*M/Lr*IDQq*IDQd)*/<<endl;//TODO remove at end	
+				
+		};
 	//-------------			
 		
 		if (n < 10000000)n++;//TODO:number of iterations 
 		v=InvPark((RotorFluxAngle),VDQ);//voltage to be applied
-				
-
+				T1T2<<"get v alpha beta "<<v.alpha<<" "<<v.beta<<"rfa"<<RotorFluxAngle<<endl;//TODO remove at end
+				fTorque<<"get v alpha beta "<<v.alpha<<" "<<v.beta<<"rfa"<<RotorFluxAngle<<endl;//TODO remove at end
   //SVPWM:---------------
-	{// v tTwoPhase- bifasico, tendo como referencia o estator	
+	//{// v tTwoPhase- bifasico, tendo como referencia o estator	
 		
 	calc_max_mod_v_ref(v);
 		if (((VDQ.d*VDQ.d+VDQ.q*VDQ.q)) > max_mod_v_ref*max_mod_v_ref ){
+					T1T2 <<"exceeded by:"<<sqrt(VDQ.d*VDQ.d+VDQ.q*VDQ.q)<<endl;//TODO remove at end
+					fTorque<<"exceeded by:"<<sqrt(VDQ.d*VDQ.d+VDQ.q*VDQ.q)<<endl;//TODO remove at end
+
 			if (v.alpha>2.0/3.0*VDC || v.alpha<-2.0/3.0*VDC){	
 			
 				v.beta = sin(ang)*max_mod_v_ref;
@@ -483,11 +506,14 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 		}
 						
 		 T0=T-(T1+T2);
-		 
+			T1T2<<" T1:"<<FIXED_FLOAT_L(T1)<<" a1:"<<a1<<" b1:"<<b1<<" c1:"<<c1<<"   T2:"<<FIXED_FLOAT_L(T2)<<" a2:"<<a2<<" b2:"<<b2<<" c2:"<<c2<<"    T0:"<<FIXED_FLOAT_L(T0)<<endl;//TODO remove at end
+			T1T2<<" pwm_a:"<<pwm_a<<" pwm_b:"<<pwm_b<<" pwm_c:"<<pwm_c<<endl;//TODO remove at end
+			fTorque<<" T1:"<<FIXED_FLOAT_L(T1)<<" a1:"<<a1<<" b1:"<<b1<<" c1:"<<c1<<"   T2:"<<FIXED_FLOAT_L(T2)<<" a2:"<<a2<<" b2:"<<b2<<" c2:"<<c2<<"    T0:"<<FIXED_FLOAT_L(T0)<<endl<<" pwm_a:"<<pwm_a<<" pwm_b:"<<pwm_b<<" pwm_c:"<<pwm_c<<endl;//TODO remove at end
+			
 		//DutyCycles[0] = pwm_a;
 		//DutyCycles[1] = pwm_b;
 		//DutyCycles[2] = pwm_c;
-	}
+	//}
   //------
    	
 	//--------------Rotor Time Constant value adjust:			
@@ -504,6 +530,9 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 						else{ sinal_=0;}
 						
 				Tr_calc=(Tr_calc + sinal_*error*0.000002/*0.000025*//*pi_contr*/);//TODO_ tune numeric value to rate of change Rr
+				fIDQ<<" TR of motor: "<<Tr<<" Tr estimated: "<<Tr_calc/*Tr___*/<<" error: "<<error<<endl;
+				fTorque<<" TR of motor: "<<Tr<<" Tr estimated: "<<Tr_calc/*Tr___*/<<" error: "<<error<<endl;
+				
 				} 
 	//--------------			
 				
