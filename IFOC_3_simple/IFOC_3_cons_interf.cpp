@@ -50,7 +50,7 @@ float Lrro=(ro*Lr);//0.0021891
 #define MASSA (3500.0)//massa veiculo
 /*#define*/float T_G_R = (4.313/*2.33*//*1.436 1 0.789*/*4.1/*reduction:*1.9*/); //total gear racio. (gear_box*final_gear*"reduction_low_ratio")
 float T_G_R_ant=T_G_R;	
-float gradiente=0;//-0.25;//0.15;
+float gradiente=0.0;//-0.25;//0.15;
 #define G 9.81
 #define C_D 0.5
 #define RO_AIR 1.25
@@ -87,7 +87,6 @@ float wr=0.00000000001;
 bool quit=false;
 
 
-
 //clutch:
 #define N_P 2.0 
 #define us 0.15
@@ -119,6 +118,7 @@ float fdr=0.0,fqr=0.0, Iqm=0.0, Idm=0.0, fqs=0.0, fds=0.0;
 float Rr=0.0065;
 
 extern float ids, iqs, IDC;
+float iaa_p=0.0, vaa_p=0.0, cos_phi=0.0, cos_phi_a=0.0, two_phi=0.0, desc_p=0.0, phi=0.0;
 
 //////////
 float get_w_r();//TODO implement in REAL
@@ -177,16 +177,13 @@ float torque_g(float Vds,float Vqs,float angle_get_wm){//torque generated, frame
 	sum_power_trac += t*wr;
 	sum_power_battery += IDC*VDC/10000/3600;fTorque<<"battery energy : "<<sum_power_battery<<" wh"<<endl;
 	if (n*T==195)fTorque<<"efficiency end cycle "<<sum_power_out/sum_power_in<<endl;
-	fTorque<<FIXED_FLOAT(n*T)<<" sec., Torque_generated (previous): "<<t/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl<<"power (Torque_generated*rotor_velocity)(previous):"<<(t/*np*/*wr)<<"; power (Vdc*Idc)(previous):"<<(IDC*VDC)<<endl;if (IDC<0) fTorque<<"efficiency (instant. generat.)(previous) :"<<(IDC*VDC)/(t/*np*/*wr);else fTorque<<" efficiency (instant. motor)(previous):"<<(t/*np*/*wr)/(IDC*VDC);fTorque<<" machine medium efficiency: "<<sum_power_out/sum_power_in/*<<" ef: "<<sum_power_trac/sum_power_battery*/<<endl<<"We- sincronous speed in ang. electric: "<<angle_get_wm<<endl<<"(angle_get_wm-wr*np) \"slip angle:\" "<<(angle_get_wm-wr*np)<<endl;//<<"torq_l:"<<torq_L<<endl;	
+	fTorque<<FIXED_FLOAT(n*T)<<" sec., Torque_generated (previous): "<<t/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl<<"power (Torque_generated*rotor_velocity)(previous):"<<(t/*np*/*wr)<<"; power (Vdc*Idc)(previous):"<<(IDC*VDC)<<endl;if (IDC<0) fTorque<<"efficiency (instant. generat.)(previous) :"<<(IDC*VDC)/(t/*np*/*wr);else fTorque<<" efficiency (instant. motor)(previous):"<<(t/*np*/*wr)/(IDC*VDC);fTorque<<" machine medium efficiency: "<<sum_power_out/sum_power_in/*<<" ef: "<<sum_power_trac/sum_power_battery*/<<endl<<"Wm, same than We- sincronous speed in ang. electric: "<<angle_get_wm<<endl<<"(angle_get_wm-wr*np) \"slip angle speed:\" "<<(angle_get_wm-wr*np)<<endl;//<<"torq_l:"<<torq_L<<endl;	
 	t=(3.0/2.0*M*np/Lr/roLs*(fdr*(fqs)-fqr*(fds)));
 	return t;
 };
 
 float torque(float vas,float vbs,float vcs){
-		fTorque<<"RFA: "<<RotorFluxAngle<<"vas, vbs, vcs "<< vas<<" "<<vbs<<" "<<vcs<<" "<<endl;
-		float tt= torque_g(ClarkePark(RotorFluxAngle/*np*theta_r*/,tThreePhase(vas,vbs,vcs)).d/*alpha*/,ClarkePark(RotorFluxAngle/*np*theta_r*/,tThreePhase(vas,vbs,vcs)).q/*beta*/,FOC::angle.get_wm());
-		fTorque<<" torque generated "<<tt<<endl;
-return tt;
+		return torque_g(ClarkePark(RotorFluxAngle/*np*theta_r*/,tThreePhase(vas,vbs,vcs)).d/*alpha*/,ClarkePark(RotorFluxAngle/*np*theta_r*/,tThreePhase(vas,vbs,vcs)).q/*beta*/,FOC::angle.get_wm());
 };
 
 
@@ -378,17 +375,15 @@ int main(int argc, char **argv)
 	bool primeiro=true;
 	int gear=2;
 	enable_raw_mode();
-	
 	while (quit==false){
 	
-		if (/*o=getch()*/kbhit()/*||flag==true*/)
+		if (kbhit())
 		{
 			o=getchar();
-			switch(o){
-				
-				case '\n':break;	
-				case 'r' :run=true;/*flag=false*/;break;
-				case 'q' :quit=true;/*flag=false*/;break;
+			switch(o){					
+				case '\n':break;
+				case 'r' :disable_raw_mode();tcflush(0, TCIFLUSH);cout<<"running..."<<endl;run=true;enable_raw_mode();break;
+				case 'q' :quit=true;break;
 				////case 'm' :cout<<"enter magnetizing current reference:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
 	////tcflush(0, TCIFLUSH);cin>>imrreff;enable_raw_mode();/*fflush(stdin);*/break;
 				case 's' :cout<<"enter speed:";e=false;/*e-> to set by driving cycle or by speed*//*if(flag==true){flag=false;break;};*/disable_raw_mode();
@@ -409,7 +404,7 @@ int main(int argc, char **argv)
 	tcflush(0, TCIFLUSH);cin>>current_control_x_i;enable_raw_mode();/*fflush(stdin);*/break;
 				case 'd' :cout<<"enter int. gain torq_controll:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
 	tcflush(0, TCIFLUSH);cin>>torque_control_i;enable_raw_mode();/*fflush(stdin);*/break;
-				case ' ' :cout<<"pause, press r to return";run=false;break;//disable_raw_mode();
+				case ' ' :cout<<"pause, press r to return"<<endl;run=false;break;//disable_raw_mode();
 	//tcflush(0, TCIFLUSH);char f='p';while(f != ' '){cin>>f;cout<<f;};enable_raw_mode();/*fflush(stdin);*/break;
 				case '+' :w_ref++;/*flag=false;*/break;
 				case '-' :w_ref--;/*flag=false;*/break;
@@ -426,10 +421,9 @@ int main(int argc, char **argv)
 				//case 'e' : e=true;break;//set by driving_cycle
 				
 				default:cout<<"invalid operator, \ns(commanded speed)"<<" \na (enter prop. gain speed)"<<" \nb (enter int. gain speed)"<<"\nc (enter prop. gain torq_controll)"<<"\nd (enter int. gain torq_controll)"<<" \nl(load), "<</*\nt(set by torque load), */"\nv(set by vehicle load), \n+(increment speed), \n-(decrement speed) \ng (switch gear)"<</*, k(decrement load),p(increment load),*/", \nr(run), \nq(quit)"<<endl;	
-			}
+			};
 		
 		}
-		
 		else if (run==true){			
 			//DEfinition of torque load in function of power specified
 		//TODO remove following at end
@@ -506,7 +500,7 @@ int main(int argc, char **argv)
 				
 				}
 				if (b==/*175*/400)quit=true;//here
-				}	
+				};	
 				
 			set_w_ref(w_ref);
 			
@@ -515,26 +509,46 @@ int main(int argc, char **argv)
 			foc_.get_VDC();//TODO_ adapt in real(embedded).function must read DC voltage			
 			//TODO in real the following reads from e Hall sensors			
 			//TODO julgo n ser necessario seguinte, trat em GetDutyCycles
-			get_ias();/*cout<<"ia"<<abc_current.a<<endl;*/get_ibs();get_ics();//abc_current.c=-abc_current.a-abc_current.b;//TODO: for real motor, is better get abc_current.c from measure				
+			//get_ias();/*cout<<"ia"<<abc_current.a<<endl;*/get_ibs();get_ics();//abc_current.c=-abc_current.a-abc_current.b;//TODO: for real motor, is better get abc_current.c from measure				
 
 			//**float ia=get_ias();//TODO to measure cos phi
 			//**função a seguir com tempo variavel, necessario resolver para tempo const
 			//**svpwm(control);//news gates and times
 			/*here*/
-			//**iaa_p=ia;
-			//**vaa_p=vaa;
+			iaa_p=get_ias();
+			vaa_p=vaa;
 			
 			
 			
 /////____
 			
 			//**get_wr(vaa,vbb,vcc); 
-			
+				
 			foc_.GetDutyCycles((get_ias()), (get_ibs()), /*get_VDC(),*/ (get_w_ref())/*commanded rotor speed*/, (get_w_r())/*rotor speed*/);
 T1T2<<" vaa_n:"<<vaa<<" vbb_n:"<<vbb<<" vcc_n:"<<vcc<<endl<<"IDC_previous: "<<IDC<<endl;
 fTorque<<" vaa_n:"<<vaa<<" vbb_n:"<<vbb<<" vcc_n:"<<vcc<<endl<<"IDC_previous: "<<IDC<<endl;
 			
+			
 			get_wr(vaa,vbb,vcc);
+			//********** used in simulation to calc cos_phi
+					fTorque<<"power iaa*vaa+ibb*vbb+icc*vcc: "<<get_ias()*vaa+/*InvClarkePark(RotorFluxAngle,IDQ)*/get_ibs()*vbb+get_ics()*vcc<<endl;
+					//fTorque<<"vaa: "<<vaa<<" iaa: "<<abc_current.a<<endl;
+					sfData_va_ia<<" "<<FIXED_FLOAT(n*T)<<" "<<vaa<<" "<<get_ias()<<" "<<get_ibs()<<" "<<get_ics()<<endl;
+					if ( vaa_p >0 && vaa_p*vaa < 0 ) {
+						cos_phi=n*T;
+						fTorque<<"vaa pass by zero"<<endl;}
+					else {fTorque<<"vaa_p:"<<vaa_p<<"vaa:"<<vaa<<endl;}
+					if ( iaa_p >0 && iaa_p*get_ias() < 0 ) {
+						two_phi=n*T-desc_p;
+						desc_p=n*T;
+						cos_phi=n*T-cos_phi;
+						cos_phi_a=cos_phi/two_phi*2*PI;
+						fTorque/*<<"cos_phi_t "<<cos_phi*/<<" phi: "<<cos_phi_a<<" cos_phi: "<<cos(cos_phi_a)<<endl;} 
+					else {
+						fTorque<<"iaa_p"<<iaa_p<<"iaa"<<get_ias()<<" phi: "<<cos_phi_a<<" cos_phi: "<<cos(cos_phi_a)<<endl;}
+		
+			//**********
+			
 			
 			distance_+=velocidade/T_G_R*R*T; 
 			fVel<<FIXED_FLOAT(n*T)<<"sec.;"<< " velocity clutch (rad/s): "<<velocidade<<"; T_G_R(total gear ratio): "<<T_G_R;
@@ -544,11 +558,11 @@ fTorque<<" vaa_n:"<<vaa<<" vbb_n:"<<vbb<<" vcc_n:"<<vcc<<endl<<"IDC_previous: "<
 
 //_____________
 		
-	}	
+	};
 	//fim_ciclo=true;
 		
 	
-	}disable_raw_mode();
+	};disable_raw_mode();
 	tcflush(0, TCIFLUSH);
 	
 	return 0;

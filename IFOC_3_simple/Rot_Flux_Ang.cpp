@@ -77,7 +77,7 @@ double RotFluxAng::/*CalcSlipAngle*/RotFluxAng_(double iqs, double ids, double s
 	imr=imr+sPWM/tRotor*(ids-imr);
 	OmegaSlip=(iqs/(tRotor*imr));
 	
-	wm=Omega_r+OmegaSlip;//we
+	wm=Omega_r+OmegaSlip;//we, electric sincronous speed 
 
 	theta_slip+=OmegaSlip*sPWM;//while(theta_slip>=PI){theta_slip=theta_slip-PI;};
 	while (theta_slip >= (2*PI)||theta_slip<0)//TODO 0 e 2*PI || 0-PI 

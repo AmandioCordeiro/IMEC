@@ -24,7 +24,6 @@
 
 
 
-ofstream Log ("log.txt");//TODO remove at end
 ofstream fTorque ("torque.txt");//TODO remove at end
 ofstream fVel ("speed.txt");//TODO remove at end
 ofstream fload ("load.txt");//TODO remove at end
@@ -33,7 +32,7 @@ ofstream fwref ("wref.txt");//TODO remove at end
 ofstream fIDQ ("IDQ_q__e_Vs.txt");//TODO remove at end
 ofstream IDQ_d__lma ("IDQ_d__lma.txt");//TODO remove at end
 ofstream fImr ("Imr.txt");//TODO remove at end
-
+ofstream sfData_va_ia ("Data_va_ia.dat");
 
 //#define SQRT3           FP_FROMFLT(1.732050807568877293527446315059)
 
@@ -136,10 +135,10 @@ float dy_nt_(float /*&*/y1, float /*&*/y_1){//y1 significa y[n+1]
 float d2y_nt_(float /*&*/y1, float /*&*/y,float /*&*/y_1){//derived can only be obtained  when n>=? 
 	return ((y1-2*y+y_1)/(T*T));}
 
-float max_mod_v_ref=0.0;
+float max_mod_volt=0.0;
 float ang=0.0;
 float ang_u=0.0;
-void FOC::calc_max_mod_v_ref(tTwoPhase v_bi){
+void FOC::calc_max_mod_volt(tTwoPhase v_bi){
 ang=atan2(v_bi.beta,v_bi.alpha);
 
 	//float ang_u=0.0;
@@ -177,7 +176,8 @@ ang=atan2(v_bi.beta,v_bi.alpha);
 	//else /*if (ang>= 11*PI/3 && ang<0)*/
 			ang_u = ang + PI/6;
 					
-	max_mod_v_ref = VDC/(cos(ang_u)*CONST_SQRT3_);//TODO uncoment in the end cos for max 
+	max_mod_volt = VDC/(cos(ang_u)*CONST_SQRT3_);//TODO uncoment in the end cos for max 
+	fTorque<<"module voltage that can be applied: "<<max_mod_volt<<endl;
 };
 float FOC::get_VDC(){//TODO implement in real
 	VDC=VDC_BAT;
@@ -246,7 +246,7 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 				current_control_x.calc_pid();
 			VDQ.q=current_control_y.get_pid_result();//torque_control.get_pid_result();
 			VDQ.d=current_control_x.get_pid_result();
-			Log<<"VDQ"<<VDQ.d<<" "<<VDQ.q<<" "<<"IDQ_d_lma"<<IDQ_d_lma<<"\n";//TODO remove at end
+			//Log<<"VDQ"<<VDQ.d<<" "<<VDQ.q<<" "<<"IDQ_d_lma"<<IDQ_d_lma<<"\n";//TODO remove at end
 			//+Vdecouple-------------			
 			IDQ_d1=IDQ.d;
 			IDQ_q1=IDQ.q;
@@ -284,7 +284,7 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 			
 			torque_control.set_process_point(IDQ.q*KT*angle.get_imr());
 			
-			//Tm;
+			
 			fTorque<<"torque_process_point: "<< (IDQ.q*KT/*3/2*np*M*M/Lr*/*angle.get_imr())<<endl;//TODO remove at end
 
 			if(Wm < Wn) 
@@ -295,7 +295,7 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 					 vel.act_min_max(-Tm1,Tm1);
 					 vel.calc_pid();		
 							fTorque<<"vel current error: "<<vel.get_current_error()<<"vel pid result: "<<vel.get_pid_result()<<endl;//TODO remove at end
-							fTorque<<"<Wn: "<<Wn<<endl;// TODO remove at end
+							fTorque<<" (max torque limit region,Wm less than Wn speed) < Wn:"<<Wn<<endl;// TODO remove at end
 							fTorque<<"Tm1: "<<Tm1<<endl;// TODO remove at end
 				
 				if(abs(IDQ.q)<=sqrt(Rd_we/Rq_we)*Idn)
@@ -311,7 +311,7 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 					vel.act_min_max(-Tm2,Tm2);
 					vel.calc_pid();		
 						fTorque<<"vel current error: "<<vel.get_current_error()<<"vel pid result: "<<vel.get_pid_result()<<endl;//TODO remove at end
-						fTorque<<"<Wc: "<<Wc<<"<Wm: "<<Wm<<endl;//TODO remove at end
+						fTorque<<"(max current(power) limit region,Wm less than Wc,bigger than Wn), < Wc:"<<Wc<<">Wn: "<<Wn<<endl;//TODO remove at end
 						fTorque<<"Tm2: "<<Tm2<<endl;//TODO remove at end
 					if(abs(IDQ.q)<=Vmax/(Wm*Ls*ro)/sqrt(pow(ro,-2.0)+Rd_we/Rq_we)*sqrt(Rd_we/Rq_we))
 						{IDQ_d_lma=sqrt(Rq_we/Rd_we)*abs(IDQ.q);
@@ -326,7 +326,7 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 					vel.act_min_max(-Tm3,Tm3);
 					vel.calc_pid();		
 						fTorque<<"vel current error: "<<vel.get_current_error()<<"vel pid result: "<<vel.get_pid_result()<<endl;//TODO remove at end
-						fTorque<<">Wc: "<<Wc<<endl;//TODO remove at end
+						fTorque<<"(max Power-speed(voltage) limit region, Wm speed bigger than Wc) > Wc:"<<Wc<<endl;//TODO remove at end
 						fTorque<<"Tm3: "<<Tm3<<endl;//TODO remove at end
 					if(abs(IDQ.q)<=Vmax/(Wm*Ls*ro)/sqrt(pow(ro,-2.0)+Rd_we/Rq_we)*sqrt(Rd_we/Rq_we))//Tp3=Tp2,?use iqs<= or Tp 
 						{IDQ_d_lma=sqrt(Rq_we/Rd_we)*abs(IDQ.q);}
@@ -361,7 +361,7 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 						fTorque<<"current_control_x current error: "<<current_control_x.get_current_error()<<"current_control_x pid result: "<<current_control_x.get_pid_result()<<endl;//TODO remove at end
 						
 			VDQ.d=current_control_x.get_pid_result();//because tension is not proporcional of currents, used in controll as currents but after decoupling, tension because is a Voltage source inverter 											   
-						cout<<"iqmax: "<<iqmax;//TODO remove at end
+						fTorque<<"iqmax: "<<iqmax;//TODO remove at end
 
 			VDQ.q=current_control_y.get_pid_result()/*torque_control.get_pid_result()*/;			
 			if (VDQ.q>0 && VDQ.q>iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/))
@@ -414,20 +414,20 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 		
 		if (n < 10000000)n++;//TODO:number of iterations 
 		v=InvPark((RotorFluxAngle),VDQ);//voltage to be applied
-				T1T2<<"get v alpha beta "<<v.alpha<<" "<<v.beta<<"rfa"<<RotorFluxAngle<<endl;//TODO remove at end
-				fTorque<<"get v alpha beta "<<v.alpha<<" "<<v.beta<<"rfa"<<RotorFluxAngle<<endl;//TODO remove at end
+				T1T2<<"v alpha:  "<<v.alpha<<" v beta: "<<v.beta<<" RotorFluxAngle: "<<RotorFluxAngle<<endl;//TODO remove at end
+				fTorque<<"v alpha: "<<v.alpha<<" v beta: "<<v.beta<<" RotorFluxAngle: "<<RotorFluxAngle<<endl;//TODO remove at end
   //SVPWM:---------------
 	//{// v tTwoPhase- bifasico, tendo como referencia o estator	
 		
-	calc_max_mod_v_ref(v);
-		if (((VDQ.d*VDQ.d+VDQ.q*VDQ.q)) > max_mod_v_ref*max_mod_v_ref ){
+	calc_max_mod_volt(v);
+		if (((VDQ.d*VDQ.d+VDQ.q*VDQ.q)) > max_mod_volt*max_mod_volt ){
 					T1T2 <<"exceeded by:"<<sqrt(VDQ.d*VDQ.d+VDQ.q*VDQ.q)<<endl;//TODO remove at end
 					fTorque<<"exceeded by:"<<sqrt(VDQ.d*VDQ.d+VDQ.q*VDQ.q)<<endl;//TODO remove at end
 
 			if (v.alpha>2.0/3.0*VDC || v.alpha<-2.0/3.0*VDC){	
 			
-				v.beta = sin(ang)*max_mod_v_ref;
-				v.alpha = cos(ang)*max_mod_v_ref;
+				v.beta = sin(ang)*max_mod_volt;
+				v.alpha = cos(ang)*max_mod_volt;
 			}
 			else if (v.alpha<=2.0/3.0*VDC && v.alpha>VDC/3.0)
 				{
@@ -439,10 +439,10 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 					 else if(v.alpha<=-VDC/3.0 && v.alpha>=-2.0/3.0*VDC){
 							if (v.beta>0)v.beta=(2.0/3.0*VDC+v.alpha)/tan(PI/2.0-PI/3.0);else v.beta=-(2.0/3.0*VDC+v.alpha)/tan(PI/2.0-PI/3.0);
 							}
-			calc_max_mod_v_ref(v);	  
-			if (((v.beta*v.beta+v.alpha*v.alpha)) > max_mod_v_ref*max_mod_v_ref ){
-				v.beta = sin(ang)*max_mod_v_ref;
-				v.alpha = cos(ang)*max_mod_v_ref;
+			calc_max_mod_volt(v);	  
+			if (((v.beta*v.beta+v.alpha*v.alpha)) > max_mod_volt*max_mod_volt ){
+				v.beta = sin(ang)*max_mod_volt;
+				v.alpha = cos(ang)*max_mod_volt;
 			
 			}
 		}

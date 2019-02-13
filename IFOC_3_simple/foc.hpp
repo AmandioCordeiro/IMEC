@@ -83,11 +83,11 @@ extern long n;
 float dy_nt_(float /*&*/y1, float /*&*/y_1);
 float d2y_nt_(float /*&*/y1, float /*&*/y,float /*&*/y_1);
 
-extern float max_mod_v_ref;
+extern float max_mod_volt;
 extern float ang;
 extern float ang_u;
 
-void calc_max_mod_v_ref(tTwoPhase v_bi);
+void calc_max_mod_volt(tTwoPhase v_bi);
 
 extern float Wm;	
 extern float Rd_we;
@@ -124,6 +124,8 @@ extern ofstream fwref;//TODO remove at end
 extern ofstream fIDQ;//TODO remove at end
 extern ofstream fImr;//TODO remove at end
 extern ofstream IDQ_d__lma;//TODO remove at end
+extern ofstream sfData_va_ia;//TODO remove at end
+
 class FOC
 {
    public:
@@ -141,7 +143,7 @@ class FOC
 	  void vel_tune_pid();//TODO_ can be removed at end after find good values 
 		void torque_control_tune_pid();//TODO_ can be removed at end after find good values
 	
-	  void calc_max_mod_v_ref(tTwoPhase v_bi);
+	  void calc_max_mod_volt(tTwoPhase v_bi);
 	  void GetDutyCycles(float il1, float il2, /*float VDC,*/ float w_ref/*commanded rotor speed*/, float wr_/*rotor speed*/);
 	  float il3/*, IDC*/;
 	  int a1,b1,c1,a2,b2,c2;//interruptores da ponte trifásica, 1- first time T1, 2- second time T2
