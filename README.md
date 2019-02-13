@@ -11,9 +11,5 @@ Induction machine energy efficient control:
   SVPWM - Space Vector Pulse Width Modulation
 
 
-
-Induction Machine and Electric Vehicle Simulation:
-  -Motor simulation
-  -Clutch simulation
-  -Vehicle simulation
-  -Driving Cycle simulation
+_________________________________________________
+Induction Machine and Electric Vehicle Simulation: Motor, Clutch, Vehicle, Driving Cycle simulation
