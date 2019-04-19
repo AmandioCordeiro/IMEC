@@ -65,7 +65,7 @@ using namespace std;
 #define Idmin (71.0)
 #define Tr 0.252308//? (Lr/Rr)
 #define Rs 0.012//?
-#define Rm 650.0//? represent eddy currents. TODO_ don't know this value
+#define Rm 350//650.0//? represent eddy currents. TODO_ don't know this value
 #define ro (1.0-(M*M)/(Ls*Lr))
 #define Imax 400.0//? max igbt current
 
@@ -76,7 +76,7 @@ using namespace std;
 #define T_LOAD_1_sec 0.135/T
 #define KT_t_cag 0.9*KT
 
-#define VDC_BAT 300.0
+#define VDC_BAT 288.0
 extern float vel_p, vel_i, torque_control_p, torque_control_i, current_control_x_p, current_control_x_i;
 
 extern long n;

@@ -424,27 +424,27 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 					T1T2 <<"exceeded by:"<<sqrt(VDQ.d*VDQ.d+VDQ.q*VDQ.q)<<endl;//TODO remove at end
 					fTorque<<"exceeded by:"<<sqrt(VDQ.d*VDQ.d+VDQ.q*VDQ.q)<<endl;//TODO remove at end
 
-			if (v.alpha>2.0/3.0*VDC || v.alpha<-2.0/3.0*VDC){	
+			//if (v.alpha>2.0/3.0*VDC || v.alpha<-2.0/3.0*VDC){	
 			
 				v.beta = sin(ang)*max_mod_volt;
 				v.alpha = cos(ang)*max_mod_volt;
-			}
-			else if (v.alpha<=2.0/3.0*VDC && v.alpha>VDC/3.0)
-				{
-					if (v.beta>0)v.beta=(2.0/3.0*VDC-v.alpha)/tan(PI/2.0-PI/3.0);else v.beta=-(2.0/3.0*VDC-v.alpha)/tan(PI/2.0-PI/3.0);
-				}
-				else if(v.alpha>-VDC/3.0 && v.alpha<=VDC/3.0){
-						if (v.beta>0)v.beta=VDC/CONST_SQRT3_;else /*if(v.beta<0)*/ v.beta=-VDC/CONST_SQRT3_;
-						}
-					 else if(v.alpha<=-VDC/3.0 && v.alpha>=-2.0/3.0*VDC){
-							if (v.beta>0)v.beta=(2.0/3.0*VDC+v.alpha)/tan(PI/2.0-PI/3.0);else v.beta=-(2.0/3.0*VDC+v.alpha)/tan(PI/2.0-PI/3.0);
-							}
-			calc_max_mod_volt(v);	  
-			if (((v.beta*v.beta+v.alpha*v.alpha)) > max_mod_volt*max_mod_volt ){
-				v.beta = sin(ang)*max_mod_volt;
-				v.alpha = cos(ang)*max_mod_volt;
+			//}
+			//else if (v.alpha<=2.0/3.0*VDC && v.alpha>VDC/3.0)
+				//{
+				//	if (v.beta>0)v.beta=(2.0/3.0*VDC-v.alpha)/tan(PI/2.0-PI/3.0);else v.beta=-(2.0/3.0*VDC-v.alpha)/tan(PI/2.0-PI/3.0);
+				//}
+				//else if(v.alpha>-VDC/3.0 && v.alpha<=VDC/3.0){
+				//		if (v.beta>0)v.beta=VDC/CONST_SQRT3_;else /*if(v.beta<0)*/ v.beta=-VDC/CONST_SQRT3_;
+					//	}
+					 //else if(v.alpha<=-VDC/3.0 && v.alpha>=-2.0/3.0*VDC){
+						//	if (v.beta>0)v.beta=(2.0/3.0*VDC+v.alpha)/tan(PI/2.0-PI/3.0);else v.beta=-(2.0/3.0*VDC+v.alpha)/tan(PI/2.0-PI/3.0);
+							//}
+			//calc_max_mod_volt(v);	  
+			//if (((v.beta*v.beta+v.alpha*v.alpha)) > max_mod_volt*max_mod_volt ){
+				//v.beta = sin(ang)*max_mod_volt;
+				//v.alpha = cos(ang)*max_mod_volt;
 			
-			}
+			//}
 		}
 	
 	
