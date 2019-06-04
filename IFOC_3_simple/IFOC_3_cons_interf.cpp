@@ -97,7 +97,7 @@ bool quit=false;
 #define XTO_CNT 0.00402
 #define XTO_CLS 0.00778
 #define XTO_MAX 0.012
-#define F_MAX 5000
+#define F_MAX 17000//5000
 
 #define CLUTCH_TIME 0.5//0.13//0.5 sec.
 int clutch_time=-1;
@@ -177,7 +177,7 @@ float torque_g(float Vds,float Vqs,float angle_get_wm){//torque generated, frame
 	sum_power_trac += t*wr;
 	sum_power_battery += IDC*VDC/10000/3600;fTorque<<"battery energy : "<<sum_power_battery<<" wh"<<endl;
 	if (n*T==195)fTorque<<"efficiency end cycle "<<sum_power_out/sum_power_in<<endl;
-	fTorque<<FIXED_FLOAT(n*T)<<" sec., Torque_generated (previous): "<<t/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl<<"power (Torque_generated*rotor_velocity)(previous):"<<(t/*np*/*wr)<<"; power (Vdc*Idc)(previous):"<<(IDC*VDC)<<endl;if (IDC<0) fTorque<<"efficiency (instant. generat.)(previous) :"<<(IDC*VDC)/(t/*np*/*wr);else fTorque<<" efficiency (instant. motor)(previous):"<<(t/*np*/*wr)/(IDC*VDC);fTorque<<" machine medium efficiency: "<<sum_power_out/sum_power_in/*<<" ef: "<<sum_power_trac/sum_power_battery*/<<endl<<"Wm, same than We- sincronous speed in ang. electric: "<<angle_get_wm<<endl<<"(angle_get_wm-wr*np) \"slip angle speed:\" "<<(angle_get_wm-wr*np)<<endl;//<<"torq_l:"<<torq_L<<endl;	
+	fTorque<<FIXED_FLOAT(n*T)<<" sec., Torque_generated (previous): "<<t/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl<<"power (Torque_generated*rotor_velocity)(previous):"<<(t/*np*/*wr)<<"; power (Vdc*Idc)(previous):"<<(IDC*VDC)<<endl;if (IDC<0) fTorque<<"efficiency (instant. generat.)(previous) :"<<(IDC*VDC)/(t/*np*/*wr);else fTorque<<" efficiency (instant. motor)(previous):"<<(t/*np*/*wr)/(IDC*VDC);fTorque<<" machine medium efficiency: "<<sum_power_out/sum_power_in/*<<" ef: "<<sum_power_trac/sum_power_battery*/<<endl<<"Wm, same than We- sincronous speed in ang. electric: "<<angle_get_wm<<endl<<"(angle_get_wm-wr*np) \"slip angle:\" "<<(angle_get_wm-wr*np)<<endl;//<<"torq_l:"<<torq_L<<endl;	
 	t=(3.0/2.0*M*np/Lr/roLs*(fdr*(fqs)-fqr*(fds)));
 	return t;
 };
@@ -398,6 +398,9 @@ int main(int argc, char **argv)
 	tcflush(0, TCIFLUSH);cin>>vel_i;enable_raw_mode();/*fflush(stdin);*/break;
 				case 'c' :cout<<"enter prop. gain torq_controll:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
 	tcflush(0, TCIFLUSH);cin>>torque_control_p;enable_raw_mode();/*fflush(stdin);*/break;
+				case 'z' :cout<<"enter prop. gain current_control_y_p:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
+	tcflush(0, TCIFLUSH);cin>>current_control_y_p;enable_raw_mode();/*fflush(stdin);*/break;
+				
 				case 'e' :cout<<"enter prop. gain flux:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
 	tcflush(0, TCIFLUSH);cin>>current_control_x_p;enable_raw_mode();/*fflush(stdin);*/break;
 				case 'f' :cout<<"enter int. gain flux:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();

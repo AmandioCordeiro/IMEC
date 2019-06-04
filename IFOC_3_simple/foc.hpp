@@ -41,7 +41,7 @@ using namespace std;
 #define torque_control_Max_pid_res 391.0//?
 #define torque_control_cel 0.4//400.0//?
 
-#define current_control_y_p 1.0//TODO//0.7//10//? 
+//#define current_control_y_p 1.0//TODO//0.7//10//? 
 #define current_control_y_i 0.0005//(0.00625)//0.0625//?
 #define current_control_y_d 0.0//?
 #define current_control_y_Min_pid_res (-6.45)
@@ -108,7 +108,7 @@ extern float vaa,vbb,vcc;
 //extern RotFluxAng angle;
 extern float ids,iqs,VDC;
 extern float Vmax;
-extern float vel_p,vel_i,torque_control_p,torque_control_i,current_control_x_p,current_control_x_i;
+extern float vel_p,vel_i,torque_control_p,torque_control_i,current_control_x_p,current_control_x_i,current_control_y_p;
 
 extern float Lsro;//TODO make #define
 //#define TR (Lr/Rr)//TODO remove at end

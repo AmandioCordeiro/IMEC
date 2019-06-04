@@ -121,6 +121,7 @@ float torque_control_p=/*to use current controller */128/*estava este val em tor
 float torque_control_i=0.000008/*alterei0.0009(0.001) 0.008*/;//TODO: torque controller integral gain
 float current_control_x_p=0.54;//0.5 a experiencia tava 0.6
 float current_control_x_i=0.00001;
+float current_control_y_p=0.64/*0.082 1.0*/;
 
 float Lsro=(ro*Ls);//0.00081261//TODO make define
 
@@ -321,7 +322,7 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 					}
 				else {
 					//max Power-speed(voltage) limit region:
-					Tm3=0.9*/*cag*/KT_t_cag*(pow((Vmax/(Wm*Ls)),2.0)/(2.0*ro));
+					Tm3=/*0.9**cag*/KT/*_t_cag*/*(pow((Vmax/(Wm*Ls)),2.0)/(2.0*ro));
 					Tm=Tm3;
 					vel.act_min_max(-Tm3,Tm3);
 					vel.calc_pid();		
@@ -360,20 +361,20 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 			current_control_x.calc_pid();
 						fTorque<<"current_control_x current error: "<<current_control_x.get_current_error()<<"current_control_x pid result: "<<current_control_x.get_pid_result()<<endl;//TODO remove at end
 						
-			VDQ.d=current_control_x.get_pid_result();//because tension is not proporcional of currents, used in controll as currents but after decoupling, tension because is a Voltage source inverter 											   
+			VDQ.d=current_control_x.get_pid_result();//because tension is not proporcional of currents, used in controll as currents but after decoupling, tension, because is a Voltage source inverter 											   
 						fTorque<<"iqmax: "<<iqmax;//TODO remove at end
 
 			VDQ.q=current_control_y.get_pid_result()/*torque_control.get_pid_result()*/;			
-			if (VDQ.q>0 && VDQ.q>iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/))
-				VDQ.q=iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/);
-			else if (VDQ.q<0 && VDQ.q<-iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/))
-				VDQ.q=-iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/);
+			//if (VDQ.q>0 && VDQ.q>iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/))
+			//	VDQ.q=iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/);
+			//else if (VDQ.q<0 && VDQ.q<-iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/))
+			//	VDQ.q=-iqmax*(Rs*1.1/*+IDQ_q_p*Lps*/);
 			
 			/*here*/
 			//VDQ_ant=VDQ;//not used
-						fIDQ<<FIXED_FLOAT(n*T)<<" sec.;"<<" VDQ_rfa.d: "<<VDQ_rtc.d<<endl<<" IDQd: "<<IDQ.d<<" IDQq: "<<IDQ.q<<endl/*<<"(IDQd^2+IDQq^2)^(1/2): "<<sqrt(IDQd*IDQd+IDQq*IDQq)*//*IDQd+IDQq*/<<"IDC:"<<IDC/*<<"IDC2_3:"<<IDC2_3*/<<endl;//TODO remove at end
+						fIDQ<<FIXED_FLOAT(n*T)<<" sec.;"<<" VDQ_rtc.d: "<<VDQ_rtc.d<<endl<<" IDQd: "<<IDQ.d<<" IDQq: "<<IDQ.q<<endl/*<<"(IDQd^2+IDQq^2)^(1/2): "<<sqrt(IDQd*IDQd+IDQq*IDQq)*//*IDQd+IDQq*/<<"IDC:"<<IDC/*<<"IDC2_3:"<<IDC2_3*/<<endl;//TODO remove at end
 				fIDQ<<"VDQ.d :"<<VDQ.d<<endl<<"VDQ.q: "<<VDQ.q<<endl;//TODO remove at end
-				fTorque<<FIXED_FLOAT(n*T)<<" sec.;"<<" VDQ_rfa.d: "<<VDQ_rtc.d<<endl<<" IDQd: "<<IDQ.d<<" IDQq: "<<IDQ.q<<endl/*<<"(IDQd^2+IDQq^2)^(1/2): "<<sqrt(IDQd*IDQd+IDQq*IDQq)*//*IDQd+IDQq*/<<"IDC:"<<IDC/*<<"IDC2_3:"<<IDC2_3*/<<endl<<"VDQ.d :"<<VDQ.d<<endl<<"VDQ.q: "<<VDQ.q<<endl;//TODO remove at end
+				fTorque<<FIXED_FLOAT(n*T)<<" sec.;"<<" VDQ_rtc.d: "<<VDQ_rtc.d<<endl<<" IDQd: "<<IDQ.d<<" IDQq: "<<IDQ.q<<endl/*<<"(IDQd^2+IDQq^2)^(1/2): "<<sqrt(IDQd*IDQd+IDQq*IDQq)*//*IDQd+IDQq*/<<"IDC:"<<IDC/*<<"IDC2_3:"<<IDC2_3*/<<endl<<"VDQ.d :"<<VDQ.d<<endl<<"VDQ.q: "<<VDQ.q<<endl;//TODO remove at end
 
 		//}
 		
