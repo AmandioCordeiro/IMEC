@@ -76,7 +76,8 @@ using namespace std;
 #define T_LOAD_1_sec 0.135/T
 #define KT_t_cag 0.9*KT
 
-#define VDC_BAT 288.0
+#define VDC_BAT 300.0
+extern float temp_bat;
 extern float vel_p, vel_i, torque_control_p, torque_control_i, current_control_x_p, current_control_x_i;
 
 extern long n;
@@ -125,6 +126,10 @@ extern ofstream fIDQ;//TODO remove at end
 extern ofstream fImr;//TODO remove at end
 extern ofstream IDQ_d__lma;//TODO remove at end
 extern ofstream sfData_va_ia;//TODO remove at end
+
+extern float VDC_cond;
+
+extern bool run;
 
 class FOC
 {

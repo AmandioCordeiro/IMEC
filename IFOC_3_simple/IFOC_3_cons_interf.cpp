@@ -174,8 +174,8 @@ float torque_g(float Vds,float Vqs,float angle_get_wm){//torque generated, frame
 	
 	if (/*(t*wr)<0 &&*/ (IDC/*VDC*/)<0) sum_power_out += abs(IDC*VDC) ; else sum_power_out += (t*wr);
 	if (/*(t*wr)<0 &&*/ (IDC/*VDC*/)<0) sum_power_in += abs(t*wr); else sum_power_in += (IDC*VDC);
-	sum_power_trac += t*wr;
-	sum_power_battery += IDC*VDC/10000/3600;fTorque<<"battery energy : "<<sum_power_battery<<" wh"<<endl;
+	//sum_power_trac += t*wr;
+	sum_power_battery += IDC*VDC*T/3600;fTorque<<"battery energy consumed : "<<sum_power_battery<<" wh"<<endl;
 	if (n*T==195)fTorque<<"efficiency end cycle "<<sum_power_out/sum_power_in<<endl;
 	fTorque<<FIXED_FLOAT(n*T)<<" sec., Torque_generated (previous): "<<t/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl<<"power (Torque_generated*rotor_velocity)(previous):"<<(t/*np*/*wr)<<"; power (Vdc*Idc)(previous):"<<(IDC*VDC)<<endl;if (IDC<0) fTorque<<"efficiency (instant. generat.)(previous) :"<<(IDC*VDC)/(t/*np*/*wr);else fTorque<<" efficiency (instant. motor)(previous):"<<(t/*np*/*wr)/(IDC*VDC);fTorque<<" machine medium efficiency: "<<sum_power_out/sum_power_in/*<<" ef: "<<sum_power_trac/sum_power_battery*/<<endl<<"Wm, same than We- sincronous speed in ang. electric: "<<angle_get_wm<<endl<<"(angle_get_wm-wr*np) \"slip angle:\" "<<(angle_get_wm-wr*np)<<endl;//<<"torq_l:"<<torq_L<<endl;	
 	t=(3.0/2.0*M*np/Lr/roLs*(fdr*(fqs)-fqr*(fds)));
@@ -363,7 +363,7 @@ bool kbhit()
 int main(int argc, char **argv)
 {
 	
-	bool run=false;
+	
 
 //	long c=0;
 
@@ -407,6 +407,9 @@ int main(int argc, char **argv)
 	tcflush(0, TCIFLUSH);cin>>current_control_x_i;enable_raw_mode();/*fflush(stdin);*/break;
 				case 'd' :cout<<"enter int. gain torq_controll:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
 	tcflush(0, TCIFLUSH);cin>>torque_control_i;enable_raw_mode();/*fflush(stdin);*/break;
+				case 't' :cout<<"enter battery temperature:";/*if(flag==true){flag=false;break;};*/disable_raw_mode();
+	tcflush(0, TCIFLUSH);cin>>temp_bat;enable_raw_mode();/*fflush(stdin);*/break;
+				
 				case ' ' :cout<<"pause, press r to return"<<endl;run=false;break;//disable_raw_mode();
 	//tcflush(0, TCIFLUSH);char f='p';while(f != ' '){cin>>f;cout<<f;};enable_raw_mode();/*fflush(stdin);*/break;
 				case '+' :w_ref++;/*flag=false;*/break;
@@ -509,7 +512,7 @@ int main(int argc, char **argv)
 			
 			set_torq_L(load);//TODO this is only in simulation, not needed in real
 			//set_Theta_r();
-			foc_.get_VDC();//TODO_ adapt in real(embedded).function must read DC voltage			
+			////foc_.get_VDC();//TODO_ adapt in real(embedded).function must read DC voltage			
 			//TODO in real the following reads from e Hall sensors			
 			//TODO julgo n ser necessario seguinte, trat em GetDutyCycles
 			//get_ias();/*cout<<"ia"<<abc_current.a<<endl;*/get_ibs();get_ics();//abc_current.c=-abc_current.a-abc_current.b;//TODO: for real motor, is better get abc_current.c from measure				
@@ -529,7 +532,7 @@ int main(int argc, char **argv)
 				
 			foc_.GetDutyCycles((get_ias()), (get_ibs()), /*get_VDC(),*/ (get_w_ref())/*commanded rotor speed*/, (get_w_r())/*rotor speed*/);
 T1T2<<" vaa_n:"<<vaa<<" vbb_n:"<<vbb<<" vcc_n:"<<vcc<<endl<<"IDC_previous: "<<IDC<<endl;
-fTorque<<" vaa_n:"<<vaa<<" vbb_n:"<<vbb<<" vcc_n:"<<vcc<<endl<<"IDC_previous: "<<IDC<<endl;
+fTorque<<" vaa_n:"<<vaa<<" vbb_n:"<<vbb<<" vcc_n:"<<vcc<<endl<<"IDC_previous: "<<IDC<<" VDC: "<<VDC<<" "<<endl;
 			
 			
 			get_wr(vaa,vbb,vcc);
