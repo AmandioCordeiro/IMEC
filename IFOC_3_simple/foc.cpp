@@ -24,16 +24,6 @@
 
 
 
-ofstream fTorque ("torque.txt");//TODO remove at end
-ofstream fVel ("speed.txt");//TODO remove at end
-ofstream fload ("load.txt");//TODO remove at end
-ofstream T1T2 ("T1T2.txt");//TODO remove at end
-ofstream fwref ("wref.txt");//TODO remove at end
-ofstream fIDQ ("IDQ_q__e_Vs.txt");//TODO remove at end
-ofstream IDQ_d__lma ("IDQ_d__lma.txt");//TODO remove at end
-ofstream fImr ("Imr.txt");//TODO remove at end
-ofstream sfData_va_ia ("Data_va_ia.dat");
-
 //#define SQRT3           FP_FROMFLT(1.732050807568877293527446315059)
 
 
@@ -92,29 +82,32 @@ void FOC::SetDirection(int _dir)
 }
 */
 
-float Wm = 0.0;	
+float Wm = 0.0;	//synchronous speed
 float Rd_we=0.0;
 float Rq_we=0.0;
 float IDQ_d_lma=Idn;// rotor magnetization current
 			
 //float Wn = 0.0;
 //float Wc = 0.0;	
-float Tm=0.0;
-float Tm2=0.0;
-float Tm3=0.0;
-float Tm1=0.0;
+
+float Tm1=0.0;//max. torque in max. torque limit region:
+float Tm2=0.0;//max. torque in max. current(power) limit region:
+float Tm3=0.0;//max. torque in max. Power-speed(voltage) limit region:
+float Tm=0.0;//max. torque of iteration (Tm1||Tm2||Tm3)
+
 float iqmax=0.0;
 float error=0.0;
 int sinal_=0.0;
 
-float IDC=0.0;//TODO: remove at end. to calc medium value of IDC 
+//float IDC=0.0;//TODO: remove at end. to calc medium value of IDC 
 float vaa=0.0,vbb=0.0,vcc=0.0;
 
-long n=0;
 float ids=0.0, iqs=0.0;
-float VDC;
-float Vmax;
+
+extern long n;
+
 //TODO remove at end the folloving block, replace for defines
+//PI controllers values
 float vel_p=20.0;////20.0;//6;//1000;//1;//1//9/ /1.1//(3)//6.0*0.9//(2/*4.5*/)//TODO: speed controller gain 
 float vel_i=0.0006;//0.00006;//TODO: speed controller integral gain 
 float torque_control_p=/*to use current controller */128/*estava este val em torq_control:0.33,mas experimentei c 1.4;*//* e deu bons result.*//*3.6*0.124*/;//alterei*0.5 TODO: torque controller gain
@@ -125,17 +118,11 @@ float current_control_y_p=0.64/*0.082 1.0*/;
 
 float Lsro=(ro*Ls);//0.00081261//TODO make define
 
-float RotorFluxAngle=0.0;
+float RotorFluxAngle=0.0;//TODO in each cycle use RotorFluxAngle+=PI/2;??
 
 tThreePhase abc_current(0.0,0.0,0.0);
 
-bool run=false;
-#define AH 19.5
-float  D_C=0.04*AH;//delivered charge
-#define NUM_PARALLEL_CELL 3.0
-#define NUM_SERIES_CELL (7.0*13.0)
-float temp_bat=-9.1;
-bool SIGNAL_bat_full=false;
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 float dy_nt_(float /*&*/y1, float /*&*/y_1){//y1 significa y[n+1] 
 	return ((y1-y_1)/(2*T));}
@@ -143,12 +130,55 @@ float dy_nt_(float /*&*/y1, float /*&*/y_1){//y1 significa y[n+1]
 float d2y_nt_(float /*&*/y1, float /*&*/y,float /*&*/y_1){//derived can only be obtained  when n>=? 
 	return ((y1-2*y+y_1)/(T*T));}
 
-float max_mod_volt=0.0;
+float max_mod_volt=0.0;//max. voltage that can be applied
 float ang=0.0;
 float ang_u=0.0;
 
-float VDC_cond=0.0;
 
+void code(){
+//TODO remove the following function?, non sense, i forgot the decoupling...!? and Johannes is not taking the decoupling in consideration?. .It can be with "constVDQ" if it less than max voltage...
+//float calc_max_mod_volt_DQ_d(){
+//
+//float RotorFluxAngle_u=PI/6-RotorFluxAngle;
+//
+//	//if (ang>=0&&ang<(PI/6))
+//	//	ang_u = ang - PI/6;//gives negative
+//	//else if (ang>=PI/6 && ang<(PI/3))
+//	//		ang_u = ang - PI/6;//gives positive
+//	if (RotorFluxAngle_u>=0&&RotorFluxAngle_u<(PI/3))
+//		ang_u = RotorFluxAngle_u - PI/6;//cos positive number == cos negative number
+//	
+//	else if (RotorFluxAngle_u>=PI/3 && RotorFluxAngle_u<(2*PI/3))
+//			ang_u = RotorFluxAngle_u - PI/2 ;
+//	//else if (ang>=PI/2 && ang<(2*PI/3))
+//		//	ang_u = ang - PI/2;
+//	
+//	else if (RotorFluxAngle_u>=2*PI/3 && RotorFluxAngle_u<(PI))
+//		//	ang_u = 5*PI/6 - ang;
+//	//else if (ang>= 5*PI/6 && ang<PI)
+//			ang_u = RotorFluxAngle_u - 5*PI/6;
+//	
+//	
+//	else if (RotorFluxAngle_u>=-PI && RotorFluxAngle_u<(-2*PI/3))
+//			//ang_u = ang + 5*PI/6;//gives neg
+//	//else if (ang>= -5*PI/6 && ang<-2*PI/3)
+//			ang_u = RotorFluxAngle_u + 5*PI/6;//gives positive	 	
+//	////////////
+//	else if (RotorFluxAngle_u>=-2*PI/3 && RotorFluxAngle_u<(-PI/3))
+//			//ang_u = 3*PI/2 - ang;
+//	//else if (ang>= 3*PI/2 && ang<5*PI/3)
+//			ang_u = RotorFluxAngle_u + PI/2;
+//		
+//	else //if (ang>=5*PI/3 && ang<(11*PI/6))
+//			//ang_u = 11*PI/6 - ang;
+//	//else /*if (ang>= 11*PI/3 && ang<0)*/
+//			ang_u = RotorFluxAngle_u + PI/6;
+//					
+//	return (VDC/(cos(ang_u)*CONST_SQRT3_));//TODO uncoment in the end cos for max 
+//	fTorque<<"module voltage that can be applied DQ: "<<(VDC/(cos(ang_u)*CONST_SQRT3_))<<endl;
+//
+//}
+}
 void FOC::calc_max_mod_volt(tTwoPhase v_bi){
 ang=atan2(v_bi.beta,v_bi.alpha);
 
@@ -192,102 +222,13 @@ ang=atan2(v_bi.beta,v_bi.alpha);
 };
 
 
-//simulation of battery, aproximation
-//
-float get_V__D_C_minus_Ten(float D_C){
-	float cell_voltage=3.0+(2.8-3.0)/(12.0-AH*0.04)*(D_C-AH*0.04);
-	if (D_C>12)cell_voltage=2.8+(2.0-2.8)/(16.5-12.0)*(D_C-12.0);
-	fTorque<<"cell voltage: "<<cell_voltage<<endl;
-return cell_voltage;
-};
-
-float get_V__D_C_zero(float D_C){
-	float cell_voltage=3.1+(2.9-3.1)/(13.0-AH*0.04)*(D_C-AH*0.04);
-	if (D_C>13)cell_voltage=2.9+(2.0-2.9)/(18.0-13.0)*(D_C-13.0);
-	fTorque<<"cell voltage: "<<cell_voltage<<endl;
-return cell_voltage;
-};
-
-float get_V__D_C_Ten(float D_C){
-	float cell_voltage=3.2+(3.1-3.2)/(15.0-AH*0.04)*(D_C-AH*0.04);
-	if (D_C>15)cell_voltage=3.1+(1.8-3.1)/(19.0-15.0)*(D_C-15.0);
-	fTorque<<"cell voltage: "<<cell_voltage<<endl;
-return cell_voltage;
-};
-float get_V__D_C_Twenty_five(float D_C){
-	float cell_voltage=3.3+(3.1-3.3)/(18.0-AH*0.04)*(D_C-AH*0.04);
-	if (D_C>18)cell_voltage=3.1+(2.0-3.1)/(19.0-18.0)*(D_C-18.0);
-	fTorque<<"cell voltage: "<<cell_voltage<<endl;
-return cell_voltage;
-};
-float FOC::get_VDC(){//TODO implement in real
-	
-	D_C=D_C+T*IDC/NUM_PARALLEL_CELL/3600;
-	
-	fTorque<<"D_C "<<D_C<<endl;
-	float V__D_C__temp_bat=3.0;
-	
-	if (n==0){VDC=VDC_BAT;VDC_cond=VDC;}
-	else{
-		//VDC_cond-=1.0/(22426.0*3.0/7.0/13.0)*IDC*T;VDC=VDC_cond-0.005/3.0*7.0*13.0*IDC; //22426- capacity of a a123 systems cell, Pack:(3p7s)*13(serie connection), max 300v, average 278
-		if (temp_bat>=-10.0&&temp_bat<0.0){
-				V__D_C__temp_bat=get_V__D_C_minus_Ten(D_C)+(get_V__D_C_zero(D_C)-get_V__D_C_minus_Ten(D_C))/10*(temp_bat-(-10));//D_C- delivered capacity
-		}else
-		if (temp_bat>=0.0 && temp_bat<10.0){
-			V__D_C__temp_bat=get_V__D_C_zero(D_C)+(get_V__D_C_Ten(D_C)-get_V__D_C_zero(D_C))/10*(temp_bat);
-		}
-		else
-		if(temp_bat>=10.0&&temp_bat<25.0){
-			V__D_C__temp_bat=get_V__D_C_Ten(D_C)+(get_V__D_C_Twenty_five(D_C)-get_V__D_C_Ten(D_C))/15*(temp_bat-10);
-		}
-		else
-		if (temp_bat>=25.0){
-		
-		 V__D_C__temp_bat=get_V__D_C_Twenty_five(D_C);
-		}};
-	
-	float SOC=(100.0-D_C/AH*100.0)/100;
-	float R_cell_m_ten=25.0+(17.0-25.0)*(SOC);
-	float R_cell_zero=15.0+(10.0-15.0)/(0.99-0.2)*(SOC-0.2);
-	if(SOC<0.2)R_cell_zero=25.0+(15.0-25.0)*(SOC);
-	float R_cell_ten=10.0+(5.0-10.0)*(SOC);
-	float R_cell_twenty_five=5.0+(2.5-5.0)*SOC;
-	fTorque<<"V__D_C__temp_bat: "<<V__D_C__temp_bat<<" SOC: "<<SOC<<endl;	
-	float R_cell=25.0;	
-	if (temp_bat>=-10.0&&temp_bat<0.0){
-		R_cell=R_cell_m_ten+(R_cell_zero-R_cell_m_ten)/10*(temp_bat-(-10));
-	}else
-	if (temp_bat>=0.0 && temp_bat<10.0){
-		R_cell=R_cell_zero+(R_cell_ten-R_cell_zero)/10*temp_bat;
-	}
-	else
-	if(temp_bat>=10.0&&temp_bat<25.0){
-		R_cell=R_cell_ten+(R_cell_twenty_five-R_cell_ten)/15*(temp_bat-(10));
-	}
-	else
-	if (temp_bat>=25.0){
-	
-	 R_cell=R_cell_twenty_five;
-	};
-	fTorque<<"R_cell: "<<R_cell<<endl;
-	VDC=V__D_C__temp_bat*NUM_SERIES_CELL-R_cell*0.001/NUM_PARALLEL_CELL*IDC;
-	
-	if (V__D_C__temp_bat < 2.4 )run=false;//-> stop simulation
-	//TODO 
-	if (SOC > 0.96)SIGNAL_bat_full=true;//-> stop charging
-	Vmax=VDC/CONST_SQRT3_;
-	return VDC;
-	
-	};
-
-//end simulation battery code
-//
 FOC::FOC():abc_voltage_svpwm(0.0,0.0,0.0),n_rtc(0),VDQ_ant(0.0,0.0),const_VDQ_d(0.0),const_VDQ_q(0.0)/*,angle(0.0)*//*,abc_current(0.0,0.0,0.0)*/,vel_Min_pid_res(-300),vel_Max_pid_res(300),IDQ(0.0,0.0),VDQ(0.0,0.0),IDQ_d_1(0.0),IDQ_d_(0.0),IDQ_d1(0.0),IDQ_d_p(0.0),IDQ_d_pp(0.0),IDQ_q_1(0.0),IDQ_q_(0.0),IDQ_q1(0.0),IDQ_q_p(0.0),IDQ_q_pp(0.0),wmr_(0.0),wmr1(0.0),wmr_p(0.0),v(0.0,0.0)/*,vaa(0.0),vbb(0.0),vcc(0.0)*/,Tr_calc(Tr),VDQ_rtc(0.0,0.0){
-	get_VDC();
+	//RotFluxAng FOC::angle;
+	FOC::bat.get_VDC();//TODO implement in real
 	Wn = (Vmax/(Ls*sqrt(Idn*Idn+ro*ro*(Imax*Imax-Idn*Idn))));
 	Wc = /*0.98**/Vmax/(Imax*Ls)*sqrt((ro*ro+1.0)/(2.0*ro*ro));//TODO acrescentei 0.9??
 	
-	vel.init_pid(0.0/*wr_*/,/*w_ref TODO put 0.0 at end*/752,vel_Min_pid_res,vel_Max_pid_res ,vel_cel);//insirir val em tune...
+	vel.init_pid(/*0.0*/wr,w_ref /*TODO put 0.0 at end*//*752*/,vel_Min_pid_res,vel_Max_pid_res ,vel_cel);//insirir val em tune...
 	vel.tune_pid(vel_p,vel_i,vel_d);/*vector <Rs_Tr> ConstTr(100,Rs_Tr());*/
 
 			//	vel.calc_pid();
@@ -309,11 +250,11 @@ FOC::FOC():abc_voltage_svpwm(0.0,0.0,0.0),n_rtc(0),VDQ_ant(0.0,0.0),const_VDQ_d(
 //void FOC::vel_tune_pid(){vel.tune_pid(vel_p,vel_i,vel_d);};
 //void FOC::torque_control_tune_pid(){torque_control.tune_pid(torque_control_p,torque_control_i,torque_control_d);};
 
-void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*commanded rotor speed*/, float wr_/*rotor speed*/)
+void FOC::GetDutyCycles(float il1, float il2, float VDC,/*(va,vb,vc),*/float w_ref/*commanded rotor speed*/, float wr_/*rotor speed*/)
 {	
-	//Vmax = VDC/CONST_SQRT3_;
+	//Vmax = VDC/CONST_SQRT3_;//TODO uncoment in embedded
 	
-	il3 = -il1 -il2;//if system simetric
+	il3 = -il1 -il2;//if system simetric//TODO in real maybe better measure 3 currents
 	
 	//to measure previous current DC://TODO not needed to run IFOC, just adicional information
 	if(a1==1&&b1==0&&c1==0&&a2==1&&b2==1&&c2==0)
@@ -329,8 +270,9 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 	else //(a1==1&&b1==0&&c1==1&&a2==1&&b2==0&&c2==0)
 	{	IDC = - il2*T1/T+il1*T2/T;}
 			
-	this->get_VDC();//TODO implement in real		
 			
+	
+	
 	if(n==0){//first iteration
 			//PIDs----------------------			
 	//		 vel.init_pid(wr_,w_ref,vel_Min_pid_res,vel_Max_pid_res ,vel_cel);//insirir val em tune...
@@ -368,7 +310,9 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 			/*int*/ sinal_=1;
 			
 			//to get Rotor flux angle:
-			RotorFluxAngle=FOC::angle.RotFluxAng_(IDQ.q,IDQ.d,T,Tr_calc,wr_*np);		
+			RotorFluxAngle-=PI/2;//TODO ??
+			RotorFluxAngle=FOC::angle.RotFluxAng_(IDQ.q,IDQ.d,T,Tr_calc,wr_*np);
+			RotorFluxAngle+=PI/2;//TODO ??		
 			//RotorFluxAngle_used=RotorFluxAngle-PI/2;//TODO_:-PI/2 remove? in simulation doesn't work but in real i think it's needed??
 			
 		//PIDs------------------------------------------- To get Voltage direct and quadracture before decoupling: 
@@ -386,7 +330,9 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 			
 			
 			fTorque<<"torque_process_point: "<< (IDQ.q*KT/*3/2*np*M*M/Lr*/*angle.get_imr())<<endl;//TODO remove at end
-
+			
+			float IDQ_d_lma__not_a_number = IDQ_d_lma ;
+			
 			if(Wm >0 && Wm < Wn) 
 				{
 				//max torque limit region:
@@ -412,7 +358,7 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 					Tm=Tm2;
 					vel.act_min_max(-Tm2,Tm2);
 					if (SIGNAL_bat_full)
-						vel.act_min_max(0.0,Tm2);//TODO
+						vel.act_min_max(0.0,Tm2);//TODO, this is to not regenerative break when full battery(negative torque 0 in controller)
 					vel.calc_pid();		
 						fTorque<<"vel current error: "<<vel.get_current_error()<<"vel pid result: "<<vel.get_pid_result()<<endl;//TODO remove at end
 						fTorque<<"(max current(power) limit region,Wm less than Wc,bigger than Wn), < Wc:"<<Wc<<">Wn: "<<Wn<<endl;//TODO remove at end
@@ -429,7 +375,7 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 					Tm=Tm3;
 					vel.act_min_max(-Tm3,Tm3);
 					if (SIGNAL_bat_full)
-						vel.act_min_max(0.0,Tm3);//TODO
+						vel.act_min_max(0.0,Tm3);//TODO, this is to not regenerative break when full battery(negative torque 0 in controller)
 					vel.calc_pid();		
 						fTorque<<"vel current error: "<<vel.get_current_error()<<"vel pid result: "<<vel.get_pid_result()<<endl;//TODO remove at end
 						fTorque<<"(max Power-speed(voltage) limit region, Wm speed bigger than Wc) > Wc:"<<Wc<<endl;//TODO remove at end
@@ -450,7 +396,7 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 					 Tm=Tm1;
 					 vel.act_min_max(-Tm1,Tm1);
 					 if (SIGNAL_bat_full)
-						vel.act_min_max(0.0,Tm1);//TODO
+						vel.act_min_max(0.0,Tm1);//TODO, this is to not regenerative break when full battery(negative torque 0 in controller)
 					 vel.calc_pid();		
 							fTorque<<"vel current error: "<<vel.get_current_error()<<"vel pid result: "<<vel.get_pid_result()<<endl;//TODO remove at end
 							fTorque<<" (max torque limit region,Wm less than Wn speed) < Wn:"<<Wn<<endl;// TODO remove at end
@@ -468,7 +414,7 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 					Tm=Tm2;
 					vel.act_min_max(-Tm2,Tm2);
 					if (SIGNAL_bat_full)
-						vel.act_min_max(0.0,Tm2);//TODO
+						vel.act_min_max(0.0,Tm2);//TODO, this is to not regenerative break when full battery(negative torque 0 in controller)
 					vel.calc_pid();		
 						fTorque<<"vel current error: "<<vel.get_current_error()<<"vel pid result: "<<vel.get_pid_result()<<endl;//TODO remove at end
 						fTorque<<"(max current(power) limit region,Wm less than Wc,bigger than Wn), < Wc:"<<Wc<<">Wn: "<<Wn<<endl;//TODO remove at end
@@ -485,7 +431,7 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 					Tm=Tm3;
 					vel.act_min_max(-Tm3,Tm3);
 					if (SIGNAL_bat_full)
-						vel.act_min_max(0.0,Tm3);//TODO
+						vel.act_min_max(0.0,Tm3);//TODO, this is to not regenerative break when full battery(negative torque 0 in controller)
 					vel.calc_pid();		
 						fTorque<<"vel current error: "<<vel.get_current_error()<<"vel pid result: "<<vel.get_pid_result()<<endl;//TODO remove at end
 						fTorque<<"(max Power-speed(voltage) limit region, Wm speed bigger than Wc) > Wc:"<<Wc<<endl;//TODO remove at end
@@ -501,7 +447,8 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 			
 			if (isnanf(IDQ_d_lma)){/*IDQ_d_lma=Idn;*/IDQ_d__lma<<"is not a number IDQ_d_lam "<<endl;}//TODO remove at end
 
-			if ((IDQ_d_lma<Idmin) || isnanf(IDQ_d_lma)) IDQ_d_lma=Idmin;
+			if ( isnanf(IDQ_d_lma)) IDQ_d_lma = IDQ_d_lma__not_a_number;//TODO ?? i think is ok
+			if ((IDQ_d_lma<Idmin) ) IDQ_d_lma = Idmin;//TODO ?? i think is ok
 			
 				fTorque << "tc_ref:  "<< vel.get_pid_result() <<endl;//TODO remove at end
 			iqmax=Tm/KT/angle.get_imr()/*0.97cag*/;
@@ -524,7 +471,7 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 			current_control_x.calc_pid();
 						fTorque<<"current_control_x current error: "<<current_control_x.get_current_error()<<"current_control_x pid result: "<<current_control_x.get_pid_result()<<endl;//TODO remove at end
 						
-			VDQ.d=current_control_x.get_pid_result();//This VDQ is writen VDQ but the mean is IDQ. Because tension is not proporcional of currents, used in controll as currents but after decoupling, tension, because is a Voltage source inverter 											   
+			VDQ.d=current_control_x.get_pid_result();//This VDQ is writen VDQ but the value is IDQ. Because tension is not proporcional of currents, used in controll as currents but after decoupling, tension, because is a Voltage source inverter 											   
 						fTorque<<"iqmax: "<<iqmax;//TODO remove at end
 
 			VDQ.q=current_control_y.get_pid_result()/*torque_control.get_pid_result()*/;			
@@ -576,22 +523,42 @@ void FOC::GetDutyCycles(float il1, float il2, /*float VDC, */float w_ref/*comman
 		};
 	//-------------			
 		
-		if (n < 10000000)n++;//TODO:number of iterations 
+		//if (n < 10000000)n++;//TODO:number of iterations 
 		v=InvPark((RotorFluxAngle),VDQ);//voltage to be applied
 				T1T2<<"v alpha:  "<<v.alpha<<" v beta: "<<v.beta<<" RotorFluxAngle: "<<RotorFluxAngle<<endl;//TODO remove at end
 				fTorque<<"v alpha: "<<v.alpha<<" v beta: "<<v.beta<<" RotorFluxAngle: "<<RotorFluxAngle<<endl;//TODO remove at end
   //SVPWM:---------------
 	//{// v tTwoPhase- bifasico, tendo como referencia o estator	
-		
+	
+	//	calc_max_mod_volt(v);
+	//	if (((VDQ.d*VDQ.d+VDQ.q*VDQ.q)) > max_mod_volt*max_mod_volt ){
+	//		float max_voltage = calc_max_mod_volt_DQ();
+	//		if (VDQ.d >=  max_voltage){
+	//			VDQ.d = max_voltage;//TODO create variable to eliminate 2 function calls
+	//			VDQ.q = 0.0;
+	//			v=InvPark((RotorFluxAngle),VDQ);
+	//		}else{
+	//			if VDQ.q>=0
+	//				//ang_a = PI - RotorFluxAngle - PI/6; ang_b = PI - ang_a => ang_b = RotorFluxAngle + PI/6; VDQ.q = sin( RotorFluxAngle + PI/6 ) * ( max_voltage - VDQ.d ) / cos( RotorFluxAngle + PI/6 )=> VDQ.q = tg( RotorFluxAngle + PI/6 ) * ( max_voltage - VDQ.d );
+	//				VDQ.q = tg( RotorFluxAngle + PI/6 ) * ( max_voltage - VDQ.d );
+ 	//			else if VDQ.q<0
+	//					
+ 	//			// if (((VDQ.d*VDQ.d+VDQ.q*VDQ.q)) > max_mod_volt*max_mod_volt ){
+	//				
+	//			}
+	//		}
+	//	};
+	
 	    calc_max_mod_volt(v);
+	    fTorque<<" module volt. "<<sqrt(VDQ.d*VDQ.d+VDQ.q*VDQ.q)<<endl;
 		if (((VDQ.d*VDQ.d+VDQ.q*VDQ.q)) > max_mod_volt*max_mod_volt ){
 					T1T2 <<"exceeded by:"<<sqrt(VDQ.d*VDQ.d+VDQ.q*VDQ.q)<<endl;//TODO remove at end
 					fTorque<<"exceeded by:"<<sqrt(VDQ.d*VDQ.d+VDQ.q*VDQ.q)<<endl;//TODO remove at end
-			VDQ.d=/*IDQ.d+*/const_VDQ_d;
+			VDQ.d=/*IDQ.d+*/const_VDQ_d;//?? IDQ.d is the previous generated by motor, use the output of controllers?
 			VDQ.q=/*IDQ.q+*/const_VDQ_q;
 			v=InvPark((RotorFluxAngle),VDQ);//voltage to be applied
 				T1T2<<"v alpha:  "<<v.alpha<<" v beta: "<<v.beta<<" RotorFluxAngle: "<<RotorFluxAngle<<endl;//TODO remove at end
-				fTorque<<"v alpha: "<<v.alpha<<" v beta: "<<v.beta<<" RotorFluxAngle: "<<RotorFluxAngle<<endl;//TODO remove at end
+				fTorque<<"v alpha: "<<v.alpha<<" v beta: "<<v.beta<<" RotorFluxAngle: "<<RotorFluxAngle<<" module volt. without out. contr. "<<sqrt(VDQ.d*VDQ.d+VDQ.q*VDQ.q)<<endl;//TODO remove at end
  
 			//if (v.alpha>2.0/3.0*VDC || v.alpha<-2.0/3.0*VDC){	
 			

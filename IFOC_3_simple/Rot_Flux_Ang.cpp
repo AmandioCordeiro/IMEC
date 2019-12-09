@@ -53,7 +53,7 @@
 	OmegaSlip[0] = 0;
 	ThetaSlip[0] = 0;
 }*/
-RotFluxAng::RotFluxAng(float imr)//TODO necess rfa?? para invocar construc? NEW
+RotFluxAng::RotFluxAng(/*float imr_*/)//TODO necess rfa?? para invocar construc? NEW
 {
 	//  Initialisation of slip frequency and angle
 	OmegaSlip = 0.0;

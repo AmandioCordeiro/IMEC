@@ -74,7 +74,6 @@ float distance_=0.0;
 float velocidade=0.0;//vel. clutch
 float load=0.0, load_s=0.0;
 float b, end_f;
-float w_ref=0.0;
 
 float pl=0.0;
 bool p=true;
@@ -82,7 +81,7 @@ bool p=true;
 float torq_L=0.0;
 float J=(0.071);//TODO:?? 1pv5135-4ws14: 0.071
 
-float wr=0.00000000001;
+
 
 bool quit=false;
 
@@ -106,8 +105,8 @@ int clutch_time=-1;
 
 
 FOC foc_;//TODO_ create it in embedded
-RotFluxAng	FOC::angle(0.0);//TODO_ create it in embedded
-
+RotFluxAng	FOC::angle;//(0.0);//TODO_ create it in embedded
+battery_simulation FOC::bat;//(0.0);
 
 //float Vmax=VDC/sqrt(3.0);	//need actualization in pratice in function get_VDC( 
 
@@ -152,6 +151,7 @@ float torque_g(float Vds,float Vqs,float angle_get_wm){//torque generated, frame
 		float	s_2=(angle_get_wm-wr*np)/angle_get_wm*(angle_get_wm-wr*np)/angle_get_wm;
 		float Rfe=Rm/(s_2+1);		
 		//usado (fds_n+1-fds_n)/T=fds_n+1 +(...), e nao: (fds_n+1/T-fds_n)/T=fds_n+(...)
+	
 		float fds_=1/(1/T+Rs/Lls)*(Vds+fds/T+/*np*wr*/angle_get_wm*fqs+Rs*M/Lls*Idm);
 		float fqs_=1/(1/T+Rs/Lls)*(Vqs+fqs/T-/*np*wr*/angle_get_wm*fds+Rs*M/Lls*Iqm);
 		float fdr_=1/(1/T+Rr/Llr)*(fdr/T+(angle_get_wm-np*wr)*fqr+M*Rr/Llr*Idm);
@@ -180,6 +180,7 @@ float torque_g(float Vds,float Vqs,float angle_get_wm){//torque generated, frame
 	fTorque<<FIXED_FLOAT(n*T)<<" sec., Torque_generated (previous): "<<t/*<<"torq_i:"<<(3/2*P/2*(fds*iqs-fqs*ids))*/<<endl<<"power (Torque_generated*rotor_velocity)(previous):"<<(t/*np*/*wr)<<"; power (Vdc*Idc)(previous):"<<(IDC*VDC)<<endl;if (IDC<0) fTorque<<"efficiency (instant. generat.)(previous) :"<<(IDC*VDC)/(t/*np*/*wr);else fTorque<<" efficiency (instant. motor)(previous):"<<(t/*np*/*wr)/(IDC*VDC);fTorque<<" machine medium efficiency: "<<sum_power_out/sum_power_in/*<<" ef: "<<sum_power_trac/sum_power_battery*/<<endl<<"Wm, same than We- sincronous speed in ang. electric: "<<angle_get_wm<<endl<<"(angle_get_wm-wr*np) \"slip angle:\" "<<(angle_get_wm-wr*np)<<endl;//<<"torq_l:"<<torq_L<<endl;	
 	t=(3.0/2.0*M*np/Lr/roLs*(fdr*(fqs)-fqr*(fds)));
 	return t;
+	
 };
 
 float torque(float vas,float vbs,float vcs){
@@ -326,6 +327,7 @@ float get_wr(float va,float vb,float vc/*float torq_g,float torq_L*/){
 					}
 			}	
 			}
+			fTorque<<"w_ref"<<w_ref<<"wr"<<wr<<endl;
 		return wr;
 	};	
 float get_w_r(){return wr;};//TODO implement in REAL
@@ -373,7 +375,7 @@ int main(int argc, char **argv)
 	string line;
 	int i=0;//here
 	bool primeiro=true;
-	int gear=2;
+	int gear=1;
 	enable_raw_mode();
 	while (quit==false){
 	
@@ -528,15 +530,23 @@ int main(int argc, char **argv)
 			
 /////____
 			
+			FOC::bat.get_VDC();//TODO implement in real
+			Vmax = VDC/CONST_SQRT3_;
 			//**get_wr(vaa,vbb,vcc); 
-				
-			foc_.GetDutyCycles((get_ias()), (get_ibs()), /*get_VDC(),*/ (get_w_ref())/*commanded rotor speed*/, (get_w_r())/*rotor speed*/);
+			
+			//DOC: the following "if" is for run simulation of motor in half of T
+			if (n%2 == 0 /*&& n != 0*/){ 
+				T=T*2.0;
+				foc_.GetDutyCycles((get_ias()), (get_ibs()), /*get_*/VDC/*()*/, (get_w_ref())/*commanded rotor speed*/, (get_w_r())/*rotor speed*/);
+				T=T/2.0;
+			}
 T1T2<<" vaa_n:"<<vaa<<" vbb_n:"<<vbb<<" vcc_n:"<<vcc<<endl<<"IDC_previous: "<<IDC<<endl;
 fTorque<<" vaa_n:"<<vaa<<" vbb_n:"<<vbb<<" vcc_n:"<<vcc<<endl<<"IDC_previous: "<<IDC<<" VDC: "<<VDC<<" "<<endl;
 			
 			
 			get_wr(vaa,vbb,vcc);
-			//********** used in simulation to calc cos_phi
+	
+	{		//********** used in simulation to calc cos_phi
 					fTorque<<"power iaa*vaa+ibb*vbb+icc*vcc: "<<get_ias()*vaa+/*InvClarkePark(RotorFluxAngle,IDQ)*/get_ibs()*vbb+get_ics()*vcc<<endl;
 					//fTorque<<"vaa: "<<vaa<<" iaa: "<<abc_current.a<<endl;
 					sfData_va_ia<<" "<<FIXED_FLOAT(n*T)<<" "<<vaa<<" "<<get_ias()<<" "<<get_ibs()<<" "<<get_ics()<<endl;
@@ -554,7 +564,7 @@ fTorque<<" vaa_n:"<<vaa<<" vbb_n:"<<vbb<<" vcc_n:"<<vcc<<endl<<"IDC_previous: "<
 						fTorque<<"iaa_p"<<iaa_p<<"iaa"<<get_ias()<<" phi: "<<cos_phi_a<<" cos_phi: "<<cos(cos_phi_a)<<endl;}
 		
 			//**********
-			
+	}	
 			
 			distance_+=velocidade/T_G_R*R*T; 
 			fVel<<FIXED_FLOAT(n*T)<<"sec.;"<< " velocity clutch (rad/s): "<<velocidade<<"; T_G_R(total gear ratio): "<<T_G_R;
@@ -564,7 +574,9 @@ fTorque<<" vaa_n:"<<vaa<<" vbb_n:"<<vbb<<" vcc_n:"<<vcc<<endl<<"IDC_previous: "<
 
 //_____________
 		
+		n++;
 	};
+	
 	//fim_ciclo=true;
 		
 	

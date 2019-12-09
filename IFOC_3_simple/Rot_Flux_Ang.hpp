@@ -32,7 +32,7 @@
 class RotFluxAng
 {
    public:
-      RotFluxAng(float rfa);
+    RotFluxAng(/*float imr_/*rfa*/);
 	double RotFluxAng_/*CalcSlipAngle*/(double iqs, double ids, double sPWM, double tRotor, double Omega_r);
 	double	get_imr();
 	double get_rfa();

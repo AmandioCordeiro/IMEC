@@ -1,30 +1,15 @@
 #ifndef FOC_H
 #define FOC_H
 
-#include <stdio.h>//TODO remove at end
-#include <iostream>//TODO remove at end
-#include <math.h>
-#include <tgmath.h>
-//#include "filter_rtc.hpp"
-#include "ClarkeParkTransforms.cpp"
-#include "Rot_Flux_Ang.hpp"
-#include "tpid_class.h"
-#include <sys/ioctl.h>//TODO remove at end
-#include <termios.h>//TODO remove at end
-#include <stdbool.h>//TODO remove at end
-#include <unistd.h>//TODO remove at end
-//#include <thread>
-#include <string>//TODO remove at end
-#include <fstream>//TODO remove at end
-#include <iomanip>//TODO remove at end
-
-using namespace Maths;
-using namespace std;
+#include "battery_simulation.hpp"
 
 #define FIXED_FLOAT(x) std::fixed <<std::setprecision(4)<<(x)//TODO remove at end
 #define FIXED_FLOAT_L(x) std::fixed <<std::setprecision(9)<<(x)//TODO remove at end
 
-#define T 0.000125//8khz? TODO sample period
+//#ifndef T
+//#define T 0.000125//8khz? TODO sample period
+//#endif
+
 #define T_lag (0.0000000000000000000001)//? TODO_: time since read values until apply PWM 
 //TODO_ insert values and descoment in end #define vel_p 20.0 	//?
 //TODO_ insert values and descoment in end #define vel_i 0.0006 //?
@@ -32,7 +17,7 @@ using namespace std;
 //#define vel_Min_pid_res -300.0//?		//Min value PI out
 //#define vel_Max_pid_res 300.0//?		//Max value PI out
 //#define ACCEL 7.7 //7.7km/h per sec
-#define vel_cel 0.03//?					//max aceleration at setpoint
+#define vel_cel (0.03*10)//?TODO					//max aceleration at setpoint
 
 //TODO_ insert values and descoment in end #define torque_control_p 128//without current control_y 1.4//0.33//3.6// ?
 //TODO_ insert values and descoment in end #define torque_control_i 0.000008//0.01// ?
@@ -62,7 +47,7 @@ using namespace std;
 #define Llr 0.000140//?
 #define Lr (Llr+M)
 #define Idn 103//99.0//101.0//?
-#define Idmin (71.0)
+#define Idmin 50//(71.0*0.7)
 #define Tr 0.252308//? (Lr/Rr)
 #define Rs 0.012//?
 #define Rm 350//650.0//? represent eddy currents. TODO_ don't know this value
@@ -71,16 +56,13 @@ using namespace std;
 
 #define KT (3.0/2.0*np*M*M/Lr)
 #define TM1 (KT*Idn*sqrt(Imax*Imax-Idn*Idn))
+
 #define LOAD_1_sec 13//? to limit initial current setpoint torque to this
 //speed up code
 #define T_LOAD_1_sec 0.135/T
-#define KT_t_cag 0.9*KT
+//#define KT_t_cag 0.9*KT
 
-#define VDC_BAT 300.0
-extern float temp_bat;
 extern float vel_p, vel_i, torque_control_p, torque_control_i, current_control_x_p, current_control_x_i;
-
-extern long n;
 float dy_nt_(float /*&*/y1, float /*&*/y_1);
 float d2y_nt_(float /*&*/y1, float /*&*/y,float /*&*/y_1);
 
@@ -104,7 +86,7 @@ extern float iqmax;
 extern float error;
 extern int sinal_;
 
-extern float IDC;//TODO: remove at end? if needed. to calc medium value of IDC 
+//extern float IDC;//TODO: remove at end? if needed. to calc medium value of IDC 
 extern float vaa,vbb,vcc;
 //extern RotFluxAng angle;
 extern float ids,iqs,VDC;
@@ -116,20 +98,7 @@ extern float Lsro;//TODO make #define
 extern float RotorFluxAngle;
 extern tThreePhase abc_current;
 
-extern ofstream Log ;//TODO remove at end
-extern ofstream fTorque ;//TODO remove at end
-extern ofstream fVel ;//TODO remove at end
-extern ofstream fload ;//TODO remove at end
-extern ofstream T1T2 ;//TODO remove at end
-extern ofstream fwref;//TODO remove at end
-extern ofstream fIDQ;//TODO remove at end
-extern ofstream fImr;//TODO remove at end
-extern ofstream IDQ_d__lma;//TODO remove at end
-extern ofstream sfData_va_ia;//TODO remove at end
 
-extern float VDC_cond;
-
-extern bool run;
 
 class FOC
 {
@@ -144,23 +113,27 @@ class FOC
 	  */
 	  FOC();
 	  ~FOC();
-	  float get_VDC();
+//	  float get_VDC();
 	  void vel_tune_pid();//TODO_ can be removed at end after find good values 
 		void torque_control_tune_pid();//TODO_ can be removed at end after find good values
 	
 	  void calc_max_mod_volt(tTwoPhase v_bi);
-	  void GetDutyCycles(float il1, float il2, /*float VDC,*/ float w_ref/*commanded rotor speed*/, float wr_/*rotor speed*/);
+	  void GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded rotor speed*/, float wr_/*rotor speed*/);
 	  float il3/*, IDC*/;
 	  int a1,b1,c1,a2,b2,c2;//interruptores da ponte trifásica, 1- first time T1, 2- second time T2
 	  float T0,T1,T2;
 	  float pwm_a,pwm_b,pwm_c;// PWM
-	  float Wn,Wc;
-	  _pid vel; 
+	  float Wn,Wc;//speed of limit regions, max. torque region, max. power region, max. power-speed region
+	  
+	  //PI controllers
+	  _pid vel;
 	  _pid torque_control;
 	  _pid current_control_x;
 	  _pid current_control_y;
+	
 	  float vel_Min_pid_res;
 	  float vel_Max_pid_res;
+	  
   	  tTwoPhaseDQ IDQ, VDQ;
   	  float IDQ_d1,IDQ_d_1,IDQ_d_,IDQ_d_p,IDQ_d_pp;
 	  float IDQ_q1,IDQ_q_1,IDQ_q_,IDQ_q_p,IDQ_q_pp;
@@ -174,6 +147,7 @@ class FOC
 	  tTwoPhaseDQ VDQ_rtc,VDQ_ant;
 	  float const_VDQ_d, const_VDQ_q;
 	  int n_rtc;
+	  static battery_simulation bat;//TODO inplement in real, need know battery voltage for each cycle
 	  static RotFluxAng angle;
    protected:
    private:
