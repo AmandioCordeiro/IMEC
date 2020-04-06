@@ -5,7 +5,6 @@ float  D_C=0.04*AH;//delivered charge
 #define NUM_PARALLEL_CELL 3.0
 #define NUM_SERIES_CELL (7.0*13.0)
 float temp_bat=-9.1;
-bool SIGNAL_bat_full=false;
 
 
 
@@ -105,7 +104,7 @@ float battery_simulation::get_VDC(){//TODO implement in real
 	
 	if (V__D_C__temp_bat < 2.4 )run=false;//-> stop simulation //TODO in embedded
 	//TODO 
-	if (SOC > 0.96)SIGNAL_bat_full=true;//-> stop charging //TODO in embedded
+	(SOC > 0.96)?SIGNAL_bat_full=true:SIGNAL_bat_full=false;//-> stop charging //TODO in embedded????????????????DEVIDO AOS DIODOS O TORQUE VAI A ZERO QUANDO set em 0(depois da bat. cheia)??
 	
 	return VDC;
 	
