@@ -160,3 +160,17 @@ void _pid::act_min_max(float mini, float maxi){
 		this->minimum_pid_ = mini;
 		this->maximum_pid_ = maxi;
 }
+
+//---------------------------------------------------------------------------
+  // TUNE_PID
+  // inputs: proportional gain, integral gain, derivitive gain
+  // outputs: none
+  // process: Updates variables in _pid class with new values, used for tuning
+  //---------------------------------------------------------------------------
+ void _pid::tune_pid(float p_g, float i_g, float d_g)
+	{
+		pg_ = p_g;
+		ig_ = i_g;
+		dg_ = d_g;
+	}
+	

@@ -88,12 +88,12 @@ class _pid{
   // outputs: none
   // process: Updates variables in _pid class with new values, used for tuning
   //---------------------------------------------------------------------------
-	inline void tune_pid(float p_g, float i_g, float d_g)
-	{
+	void tune_pid(float p_g, float i_g, float d_g);
+	/*{
 		pg_ = p_g;
 		ig_ = i_g;
 		dg_ = d_g;
-	}
+	}*/
 	
 	//------------------------------------------------------------------------
   // PID_SET_INTEGRAL

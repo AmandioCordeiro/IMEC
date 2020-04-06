@@ -29,8 +29,8 @@
 //#define current_control_y_p 1.0//TODO//0.7//10//? 
 #define current_control_y_i 0.0005//(0.00625)//0.0625//?
 #define current_control_y_d 0.0//?
-#define current_control_y_Min_pid_res (-6.45)
-#define current_control_y_Max_pid_res 6.45
+#define current_control_y_Min_pid_res -7.0//(-6.45)//(-100) ////TODO
+#define current_control_y_Max_pid_res 7.0//6.45//100//
 #define current_control_y_cel 1.0// 3000//?
 
 
@@ -47,7 +47,6 @@
 #define Llr 0.000140//?
 #define Lr (Llr+M)
 #define Idn 103//99.0//101.0//?
-#define Idmin 50//(71.0*0.7)
 #define Tr 0.252308//? (Lr/Rr)
 #define Rs 0.012//?
 #define Rm 350//650.0//? represent eddy currents. TODO_ don't know this value
@@ -120,8 +119,8 @@ class FOC
 	  void calc_max_mod_volt(tTwoPhase v_bi);
 	  void GetDutyCycles(float il1, float il2, float VDC, float w_ref/*commanded rotor speed*/, float wr_/*rotor speed*/);
 	  float il3/*, IDC*/;
-	  int a1,b1,c1,a2,b2,c2;//interruptores da ponte trifásica, 1- first time T1, 2- second time T2
-	  float T0,T1,T2;
+	  //int a1,b1,c1,a2,b2,c2;//interruptores da ponte trifásica, 1- first time T1, 2- second time T2
+	  //float T0,T1,T2;
 	  float pwm_a,pwm_b,pwm_c;// PWM
 	  float Wn,Wc;//speed of limit regions, max. torque region, max. power region, max. power-speed region
 	  
@@ -144,7 +143,7 @@ class FOC
 	  float Tr_calc;
 	  tThreePhase abc_voltage_svpwm;
 	  
-	  tTwoPhaseDQ VDQ_rtc,VDQ_ant;
+	  tTwoPhaseDQ /*VDQ_rtc,*/VDQ_ant;
 	  float const_VDQ_d, const_VDQ_q;
 	  int n_rtc;
 	  static battery_simulation bat;//TODO inplement in real, need know battery voltage for each cycle
