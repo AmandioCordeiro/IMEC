@@ -13,8 +13,8 @@ Induction machine energy efficient control:
 
 _________________________________________________
 Induction Machine and Electric Vehicle Simulation: 
-Motor
-Battery
-Clutch 
-Vehicle forces
-Driving Cycle simulation
+-Motor
+-Battery
+-Clutch 
+-Vehicle forces
+-Driving Cycle simulation
