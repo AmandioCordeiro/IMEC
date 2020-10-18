@@ -117,8 +117,8 @@ float torque_control_i=0.000008/*alterei0.0009(0.001) 0.008*/;//TODO: torque con
 float current_control_d_p=0.54;//0.5 a experiencia tava 0.6
 float current_control_d_i=0.00001;
 float current_control_q_p=2.0/*2.13 este foi pior em eficiencia*//*1.56*//*1.4*//*0.64/*0.082 1.0*/;
-float current_control_q_Max_pid_res = 8.8*1.27/*31 1.28 melhor em efic que 1.13*/;//TODO
-float current_control_q_Min_pid_res = -8.8*1.27;//TODO
+float current_control_q_Max_pid_res = 8.8*1.29/*31 1.28 melhor em efic que 1.13*/;//TODO
+float current_control_q_Min_pid_res = -8.8*1.29;//TODO
 
 float Lsro=(ro*Ls);//0.00081261//TODO make define
 
