@@ -4,7 +4,7 @@
 #include <math.h>
 #include <tgmath.h>
 //#include "filter_rtc.hpp"
-#include "ClarkeParkTransforms.cpp"
+//#include "ClarkeParkTransforms.cpp"
 #include "Rot_Flux_Ang.hpp"
 #include "tpid_class.h"
 #include "variables.hpp"
@@ -23,7 +23,7 @@ using namespace std;
 //#define T 0.000125//8khz? TODO sample period .also defined in foc.hpp
 
 
-#define VDC_BAT 300.0
+#define VDC_BAT /*145*/215
 
 extern bool SIGNAL_bat_full;
 extern float temp_bat;

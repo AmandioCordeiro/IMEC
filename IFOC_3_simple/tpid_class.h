@@ -105,7 +105,7 @@ class _pid{
 	inline void /*_pid::*/pid_set_integral(float ni)
 	{
 		i_ = ni;
-		last_err_ = 0.0;
+		//current_err_ = 0.0; //last_err_ = 0.0;//TODO alterei ist á experiencia
 	}
 	
 	// Methods constructors
