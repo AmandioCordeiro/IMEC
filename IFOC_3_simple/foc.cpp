@@ -116,8 +116,8 @@ float torque_control_p=/*to use current controller */128/*estava este val em tor
 float torque_control_i=0.000008/*alterei0.0009(0.001) 0.008*/;//TODO: torque controller integral gain
 float current_control_d_p=0.54;//0.5 a experiencia tava 0.6
 float current_control_d_i=0.00001;
-float current_control_q_p=2.0/*2.13 este foi pior em eficiencia*//*1.56*//*1.4*//*0.64/*0.082 1.0*/;
-float current_control_q_Max_pid_res = 8.8*1.29/*31 1.28 melhor em efic que 1.13*/;//TODO
+float current_control_q_p= 2.0*0.99/*2.13 este foi pior em eficiencia*//*1.56*//*1.4*//*0.64/*0.082 1.0*/;
+float current_control_q_Max_pid_res = 8.8*1.29/* 1.29 melhor em efic que 1.13*/;//TODO
 float current_control_q_Min_pid_res = -8.8*1.29;//TODO
 
 float Lsro=(ro*Ls);//0.00081261//TODO make define
@@ -223,7 +223,7 @@ ang=atan2(v_bi.beta,v_bi.alpha);
 					
 	 max_mod_volt = VDC/(cos(ang_u)*CONST_SQRT3_);//TODO uncoment in the end cos for max 
 	//exp following circulo de tensao max: 
-	//max_mod_volt = VDC/(/*cos(ang_u)**/CONST_SQRT3_);
+	//max_mod_volt = VDC/(/*cos(ang_u)**/CONST_SQRT3_);//deu -0,008% num dos testes eudc
 	fTorque<<"module voltage that can be applied: "<<max_mod_volt<<endl;
 };
 

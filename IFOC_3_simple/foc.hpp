@@ -60,7 +60,7 @@ extern float current_control_q_Max_pid_res;// 8.8//6.45//100//
 #define Idn 103//99.0//101.0//?// Id nominal, rotor current magnetization nominal
 #define Tr 0.252308//? (Lr/Rr)
 #define Rs 0.012//?
-#define Rm 350//650.0//? represents eddy currents. TODO_ don't know this value
+#define Rm 300//350? represents eddy currents. TODO_ don't know this value
 #define ro (1.0-(M*M)/(Ls*Lr))
 #define Imax 400.0//? max igbt current
 

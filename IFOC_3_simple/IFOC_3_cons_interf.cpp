@@ -89,9 +89,9 @@ bool quit=false;
 
 //clutch:
 #define N_P 2.0 
-#define us 0.15
-#define ud 0.24
-#define fi 1.5
+#define US 0.15
+#define UD 0.24
+#define FI 1.5
 #define R1 0.074
 #define R2 0.104
 #define XTO_CNT 0.00402
@@ -335,18 +335,19 @@ void clutch(){//
 	//Torq_net=Te-T_l;
 	float n2=velocidade;//??
 	float Wfc=n2-n1;
-	
-	float Ru=1.0/(R2-R1)*(us/2.0*R2*R2+(ud-us)*(R2+1.0)/(fi*Wfc)*log(cosh(fi*R2*Wfc))-(us/2.0*R1*R1+(ud-us)*(R1+1.0)/(fi*Wfc)*log(cosh(fi*R1*Wfc))));
+	if ( Wfc == 0.0 ) Wfc = 0.00001  ;//new clutch
+	float Ru=1.0/(R2-R1)*(US/2.0*R2*R2+(UD-US)*(R2+1.0)/(FI*Wfc)*log(cosh(FI*R2*Wfc))-(US/2.0*R1*R1+(UD-US)*(R1+1.0)/(FI*Wfc)*log(cosh(FI*R1*Wfc))));
 	float Xto=XTO_MAX/(CLUTCH_TIME/T)*clutch_time;
 	float Ffc=F_MAX;
 	if (Xto>0.0 && Xto<=XTO_CNT)
 		{Ffc=0.0;}
-	else if(Xto>XTO_CNT && Xto<=XTO_CLS){
+	else if(Xto>XTO_CNT && Xto<=XTO_CLS){//new clutch
 		float cc = 1.0-pow((Xto-XTO_CNT)/(XTO_CLS-XTO_CNT),2);
 		if ( cc > 0 )
 			Ffc=F_MAX*(1.0-sqrt(cc));		 		
 		
 		}
+	fVel<<" Ru "<<Ru<<" Xto "<<Xto<<" Ffc "<<Ffc<<std::endl;	
 	float Tfc=-N_P*Ru*Ffc/T_G_R;
 	
 	n1=n1+(Te-Tfc)/J1*T;
