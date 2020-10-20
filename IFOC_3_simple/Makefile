@@ -13,7 +13,7 @@ CFLAGS  = -g --std=c++11
 PROG  = Induc_motor_sim
 
 # Lista dos ficheiros (arquivos) objetos necessários para o programa final
-OBJS  = foc.o ClarkeParkTransforms.o Rot_Flux_Ang.o tpid_class.o IFOC_3_cons_interf.o
+OBJS  = ClarkeParkTransforms.o variables.o battery_simulation.o foc.o Rot_Flux_Ang.o tpid_class.o IFOC_3_cons_interf.o
 #main.o window.o Board.o Life.o BoundedBoard.o
  
 all: $(PROG)
