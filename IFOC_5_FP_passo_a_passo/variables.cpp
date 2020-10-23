@@ -34,3 +34,7 @@ u_int8_t it_exc_v = 0;
 float IDQ_D_MIN = 50;
 
 bool primeiro=false;
+//new
+int time_bin_max = 0;
+int time_betw_bin_max = (int) (610*2*1/T) ;
+float temperatur_motor = 40;

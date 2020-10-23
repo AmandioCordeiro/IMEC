@@ -34,6 +34,12 @@ extern  float IDQ_D_MIN;//TODO //ID_MIN 50//Min. rotor magnetization current(Idq
 
 extern bool primeiro;
 
+//new
+extern int time_bin_max;
+extern int time_betw_bin_max;
+extern float temperatur_motor;
+#define  TIME_BIN_MAX 6.38*1.0/T
+
 //IGBT values
 #define TURN_ON_DELAY_TIME 0.00000012 //TODO put the values of igts, 0.12us
 #define RISE_TIME 0.00000006
