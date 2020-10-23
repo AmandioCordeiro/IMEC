@@ -357,7 +357,7 @@ void clutch(){//
 	float Wfc=n2-n1;
 	
 	if ( Wfc == 0.0 ) Wfc = 0.00001  ;//new clutch
-	float Ru=1.0/(R2-R1)*(US/2.0*R2*R2+(UD-US)*(R2+1.0)/(FI*Wfc)*log(cosh(FI*R2*Wfc))-(US/2.0*R1*R1+(UD-US)*(R1+1.0)/(FI*Wfc)*log(cosh(FI*R1*Wfc))));
+	float Ru=1.0/(R2_-R1_)*(US/2.0*R2_*R2_+(UD-US)*(R2_+1.0)/(FI*Wfc)*log(cosh(FI*R2_*Wfc))-(US/2.0*R1_*R1_+(UD-US)*(R1_+1.0)/(FI*Wfc)*log(cosh(FI*R1_*Wfc))));
 	float Xto=XTO_MAX/(CLUTCH_TIME/T)*clutch_time;
 	float Ffc=F_MAX;
 	if (Xto>0.0 && Xto<=XTO_CNT)

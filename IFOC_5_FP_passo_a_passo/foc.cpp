@@ -774,7 +774,7 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC,/*(float vaa,float vbb,f
 			 fTorque<<"FP -Tm "<<(-Tm)<<"FP Tm "<<(Tm)<<std::endl;
 			
 				//new
-			 if (Wm < 111*np && time_bin_max < TIME_BIN_MAX && time_betw_bin_max > 600.0*1.0/T && temperatur_motor < 60)  {Tm *= 1.8; time_bin_max++; time_bin_max > TIME_BIN_MAX ? time_betw_bin_max = 0 : time_betw_bin_max = time_betw_bin_max; } else {Tm *= 1.06/*1.1*/;time_bin_max = 0; time_betw_bin_max++;}///1.8 *1.263*/max power. edit. much worst in power and effic.. now i will try change controller prop. gain
+			 if (Wm < 10/*111*/*np && time_bin_max < TIME_BIN_MAX && time_betw_bin_max > 600.0*1.0/T && temperatur_motor < 60)  {Tm *= 1.8; time_bin_max++; time_bin_max > TIME_BIN_MAX ? time_betw_bin_max = 0 : time_betw_bin_max = time_betw_bin_max; } else {Tm *= 1.06/*1.1*/;time_bin_max = 0; time_betw_bin_max++;}///1.8 *1.263*/max power. edit. much worst in power and effic.. now i will try change controller prop. gain
 			
 			vel.act_min_max(FP_FROMFLT(-Tm),FP_FROMFLT(Tm));
 			if (SIGNAL_bat_full)
