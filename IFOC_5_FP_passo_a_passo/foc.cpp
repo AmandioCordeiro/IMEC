@@ -116,9 +116,9 @@ float torque_control_p=/*to use current controller */128/*estava este val em tor
 float torque_control_i=0.000008/*alterei0.0009(0.001) 0.008*/;//TODO: torque controller integral gain
 float current_control_d_p=0.54;//0.5 a experiencia tava 0.6
 float current_control_d_i=0.00001;
-float current_control_q_p=2.0/*1.56*//*1.4*//*0.64/*0.082 1.0*/;
-float current_control_q_Max_pid_res = 8.8;//TODO
-float current_control_q_Min_pid_res = -8.8;//TODO
+float current_control_q_p=2.0*0.99/*new 1.56*//*1.4*//*0.64/*0.082 1.0*/;
+float current_control_q_Max_pid_res = 8.8*1.29;//new TODO
+float current_control_q_Min_pid_res = -8.8*1.29;//new TODO
 
 float Lsro=(ro*Ls);//0.00081261//TODO make define
 
@@ -774,7 +774,7 @@ void FOC::GetDutyCycles(float il1, float il2, float VDC,/*(float vaa,float vbb,f
 			 fTorque<<"FP -Tm "<<(-Tm)<<"FP Tm "<<(Tm)<<std::endl;
 			
 				//new
-			 if (Wm < 111*np && time_bin_max < TIME_BIN_MAX && time_betw_bin_max > 600.0*1.0/T && temperatur_motor < 60)  {Tm *= 1.8; time_bin_max++; time_bin_max > TIME_BIN_MAX ? time_betw_bin_max = 0 : time_betw_bin_max = time_betw_bin_max; } else {Tm *= 1.06/*1.1*/;time_bin_max = 0; time_betw_bin_max++;}///1.8 *1.263*/max power. edit. much worst in power and effic.. now i will try change controller prop. gain
+			 if (Wm < 160/*111*/*np && time_bin_max < TIME_BIN_MAX && time_betw_bin_max > 600.0*1.0/T && temperatur_motor < 60)  {Tm *= 1.8; IDQ_d_min = Idn ; time_bin_max++; if (time_bin_max > TIME_BIN_MAX ) {time_betw_bin_max = 0; time_bin_max = 0;} } else {Tm *= 1.06/*1.06 1.1*/;/*time_bin_max = 0*/; time_betw_bin_max++;}///1.8 *1.263*/max power. edit. much worst in power and effic.. now i will try change controller prop. gain
 			
 			vel.act_min_max(FP_FROMFLT(-Tm),FP_FROMFLT(Tm));
 			if (SIGNAL_bat_full)
