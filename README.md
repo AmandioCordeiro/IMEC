@@ -10,7 +10,7 @@ Induction machine energy efficient control:
 
   SVPWM - Space Vector Pulse Width Modulation
   
-  MMV  - Maximum module voltage, to get maximum power for a battery voltage
+  MMV  - Maximum module voltage, to get maximum power from a motor for a battery voltage
 
 
 _________________________________________________
