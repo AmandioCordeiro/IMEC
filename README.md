@@ -9,6 +9,8 @@ Induction machine energy efficient control:
   Rotor Time Constant estimator. To adjust the constant with temperature
 
   SVPWM - Space Vector Pulse Width Modulation
+  
+  MMV  - Maximum module voltage to apply to get maximum power of motor-battery
 
 
 _________________________________________________
