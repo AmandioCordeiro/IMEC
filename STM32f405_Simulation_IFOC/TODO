@@ -1,0 +1,12 @@
+* @pre the flash page/sector needs to be erased prior to calling this function
+* 
+@return CRC of parameter flash page
+*/
+------>>>>>>>>>uint32_t parm_save()
+COMO salva parametros no f4
+------The configuration data will live in one of the 16k sectors and no longer at the end of flash.
+
+
+compilar libopencm3 com:
+
+FP_FLAGS="-mfloat-abi=soft" make
