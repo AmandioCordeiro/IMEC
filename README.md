@@ -26,12 +26,11 @@ Induction Machine and Electric Vehicle Simulation:
 -Driving Cycle simulation
 
 
-
-
+____________________________________________
 
 #Support
 
-If you find this work useful, please consider some help, check out Patron for more information
+If you find this work useful, please consider some help, check out Patreon for more information
 
 https://patreon.com/AMRC
 
