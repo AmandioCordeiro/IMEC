@@ -1,10 +1,10 @@
 # IMEC
 
-Induction machine energy efficient control:
+Induction machine energy-optimized control:
 
   IFOC-complete Indirect field oriented control for induction machine .
 
-  LMA- Loss minimization algorithm. To know the optimal current magnetization and maximum binary to apply
+  LMA- Loss minimization algorithm. To know the optimal magnetization current and maximum binary to apply
 
   Rotor Time Constant estimator. To adjust the constant with temperature
 
@@ -33,5 +33,3 @@ ____________________________________________
 If you find this work useful, please consider some support, check out Patreon for more information
 
 https://patreon.com/AMRC
-
-
